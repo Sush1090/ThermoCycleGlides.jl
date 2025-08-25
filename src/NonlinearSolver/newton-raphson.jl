@@ -18,7 +18,6 @@ function box_projection!(x::Array{T,1},lb::Array{TT,1},ub::Array{TTT,1}) where {
             x[i] = ub[i]
         end
     end
-
 end
 
 

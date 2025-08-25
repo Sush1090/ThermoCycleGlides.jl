@@ -11,8 +11,8 @@ function generate_box_solve_bounds(prob::HeatPump)
     if prob.T_cond_out > Tcrit
         throw(error("For now only subcritical heat pumps are supported. Outlet temperature to condenser must be below critical temperature."))
     end
-    psat_min = bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap,prob.z)[1]
-    psat_max = dew_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond,prob.z)[1] 
+    psat_min = dew_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1]
+    psat_max = bubble_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond + prob.ΔT_sc,prob.z)[1] 
     ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
     lb[1] = psat_min#bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
 
