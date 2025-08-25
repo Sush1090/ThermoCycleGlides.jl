@@ -6,7 +6,7 @@ This package aims to solve Heat Pump and ORC systems for given known temperature
 
 The thermodynamic computations use Clapeyron.jl. 
 
-Usage Example :
+Usage Heat Pump Example :
 
 ```julia
 julia> using Clapeyron, ThermoCycleGlides
@@ -35,3 +35,25 @@ plot_cycle(hp,sol_hp,p_min=0.3*sol_hp[1]*101325,N = 1000)
 ```
 
 ![HP_cyclopentane](Images/hp_cyclopentane.png)
+
+
+ORC Example:
+
+```julia
+julia> orc = ORC(fluid = fluid,z = [1.0], T_evap_in = 360, T_evap_out = 340, T_cond_in = 280, T_cond_out = 290, η_expander = 0.75, η_pump = 0.8, ΔT_sh = 7.0, ΔT_sc= 3.0, pp_evap = 3.0, pp_cond = 3)
+ORC{Float64}(PR{ReidIdeal, TwuAlpha, NoTranslation, vdW1fRule}("Propane"), [1.0], 360.0, 340.0, 7.0, 280.0, 290.0, 3.0, 0.8, 0.75, 3.0, 3.0)
+
+julia> sol,res = solve(orc)
+([27.619094241454576, 8.297312696256173], [1.3659347928296484e-6, -3.1898690622256254e-6])
+
+julia> η(orc,sol)
+-0.11240385922458294
+```
+
+To plot the ORC cycle: 
+
+```julia
+julia> plot_cycle(orc,sol,p_min=0.5*sol_hp[2]*101325,N = 1000)
+```
+
+![orc_propane](Images/orc_propane.png)
