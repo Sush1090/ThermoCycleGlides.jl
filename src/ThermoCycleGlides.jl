@@ -1,7 +1,7 @@
 module ThermoCycleGlides
 # Write your package code here.
 using Clapeyron, Polynomials, Interpolations, FiniteDifferences
-using ForwardDiff, Optim, Metaheuristics, CommonSolve,LinearAlgebra
+using ForwardDiff, CommonSolve,LinearAlgebra
 using Plots
 
 

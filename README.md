@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/Sush1090/ThermoCycleGlides.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/Sush1090/ThermoCycleGlides.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-This package aims to solve Heat Pump and ORC systems for given known temperature glides. 
+This package aims to solve Heat Pump and ORC systems for given known temperature glides. For now it is robust for sub-critical cycles. 
 
 The thermodynamic computations use Clapeyron.jl. 
 
@@ -75,7 +75,6 @@ hp_(x::AbstractVector{T}) where {T<:Real} = HeatPump(fluid= fluid,z= z,T_evap_in
 function obj_hp(x::AbstractVector{T}) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2, ΔT_sh and ΔT_sc"
     hp = hp_(x)
-    # lb,ub = generate_box_solve_bounds_crit(hp)
     sol,_ = solve(hp, N = 20)
 
     return COP(hp, sol)
@@ -84,9 +83,9 @@ end
 
 using Optim, LineSearches
 lower = [0.1,0.1]
-upper = [30.0,30.0] # ΔT_sc should be atleast 1K less than the difference between T_crit and T_cond_out
-x0 = [4.0,4.0]#(upper + lower) ./ 2
-inner_optimizer = LBFGS(linesearch = LineSearches.BackTracking(c_1 = 1e-5,ρ_hi = 1.0))#SimulatedAnnealing()#GradientDescent(alphaguess = 0.01)#LBFGS()
+upper = [30.0,30.0] 
+x0 = [4.0,4.0]
+inner_optimizer = LBFGS(linesearch = LineSearches.BackTracking(c_1 = 1e-5,ρ_hi = 1.0))
 opts = Optim.Options(x_abstol = 1e-5,time_limit = 20.0,iterations = 50,outer_iterations = 50)
 println("Starting optimization for HP...")
 @time results_optim = Optim.optimize(obj_hp, lower, upper, x0, Fminbox(inner_optimizer),autodiff = :forward,opts)
