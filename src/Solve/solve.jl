@@ -41,7 +41,7 @@ end
 """
 returns the residues of the pinch points for `HeatPump`
 """
-function f_hp(prob::HeatPump,x::AbstractVector{T};N::Int64) where {T<:Real}
+function F(prob::HeatPump,x::AbstractVector{T};N::Int64) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
     # @show x
     p_evap,p_cond = x .* 101325 # convert to Pa
@@ -77,7 +77,7 @@ function f_hp(prob::HeatPump,x::AbstractVector{T};N::Int64) where {T<:Real}
     return [ΔTpp_evap, ΔTpp_cond]
 end
 
-function f_orc(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
+function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
     p_evap,p_cond = x .* 101325 # convert to Pa
     T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
@@ -114,7 +114,7 @@ end
 Returns pressures and residues to the problem specificed HP/ORC using AD.
 """
 function solve_ad(prob::HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
-    f(x::AbstractVector{T}) where {T<:Real} = f_hp(prob, x,N = N)
+    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     x0 = (lb + ub) ./ 2 # initial guess
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
     return sol, f(sol)
@@ -125,7 +125,7 @@ end
 Returns pressures and residues to the problem specificed HP/ORC using FD. 
 """
 function solve_fd(prob::ThermoCycleGlides.HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
-    f(x::AbstractVector{T}) where {T<:Real} = ThermoCycleGlides.f_hp(prob, x,N = N)
+    f(x::AbstractVector{T}) where {T<:Real} = ThermoCycleGlides.F(prob, x,N = N)
     x0 = (lb + ub) ./ 2 # initial guess
     sol = ThermoCycleGlides.constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
     return sol, f(sol)
@@ -133,14 +133,14 @@ end
 
 
 function solve_ad(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
-    f(x::AbstractVector{T}) where {T<:Real} = f_orc(prob, x,N = N)
+    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     x0 = (lb + ub) ./ 2 # initial guess
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
     return sol, f(sol)
 end
 
 function solve_fd(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
-    f(x::AbstractVector{T}) where {T<:Real} = f_orc(prob, x,N = N)
+    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     x0 = (lb + ub) ./ 2 # initial guess
     sol = constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
     return sol, f(sol)
