@@ -2,7 +2,10 @@
 """
 Plots TS diagram
 """
-function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = 101325*0.4)
+function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
+  if isnothing(p_min)
+      p_min = 0.5*sol[1]*101325
+  end
     fig = plot()
     p_evap, p_cond = sol .* 101325 # convert to Pa
     fig_phase = plot_phase(fig,prob; N = N, p_min = p_min)
@@ -49,7 +52,10 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = 101325*0.4
     return fig_phase
 end
 
-function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = 101325*0.4)
+function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
+    if isnothing(p_min)
+      p_min = 0.5*sol[2]*101325
+    end
     fig = plot()
     p_evap, p_cond = sol .* 101325 # convert to Pa
     fig_phase = plot_phase(fig,prob; N = N, p_min = p_min)
