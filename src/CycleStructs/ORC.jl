@@ -1,4 +1,7 @@
 
+"""
+fluid - `EoSModel`
+"""
 mutable struct ORC{T<:Real}
     fluid::EoSModel
     z::AbstractVector{T}
@@ -101,7 +104,9 @@ function η(prob::ORC,sol::AbstractVector{T}) where {T<:Real}
     return ((h4-h3) - (h2-h1))/(h3-h2)
 end
 
-
+"""
+`show_parameters(prob::ORC)` prints parameters in REPL
+"""
 function show_parameters(prob::ORC)
     println("ORC Parameters:")
     println("Fluid: ", prob.fluid)
