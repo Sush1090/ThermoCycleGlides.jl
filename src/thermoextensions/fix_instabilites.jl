@@ -1,7 +1,6 @@
 
 
 function fix_nan!(x::AbstractVector)
-    @show x
     isnan_mask = isnan.(x)
     if all(!isnan, x)
         return x  # no NaNs to fix

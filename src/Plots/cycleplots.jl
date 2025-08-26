@@ -8,7 +8,7 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
   end
     fig = plot()
     p_evap, p_cond = sol .* 101325 # convert to Pa
-    fig_phase = plot_phase(fig,prob; N = N, p_min = p_min)
+    fig_phase = plot_phase(fig,prob.fluid,prob.z; N = N, p_min = p_min)
 
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_comp_in = enthalpy(prob.fluid, p_evap, T_evap_out, phase = :vapor)
@@ -117,6 +117,16 @@ function plot_phase(fig::Plots.Plot,prob::HeatPump; N = 30,p_min = 101325*0.4)
   throw(error("Phase plot for multicomponent fluids not implemented yet."))
 end
 
+function plot_phase(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100,p_min = 101325*0.4)
+  if length(z) == 1
+    return plot_phase_pure(fig,fluid,N = N,p_min = p_min)
+  end
+  if length(z) > 1
+    return plot_phase_mix(fig,fluid,z,N=N,p_min = p_min)
+  end
+  throw(error("IDK what you have passed to the function"))
+end
+
 function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel; N = 100,p_min = 101325*0.4)
     @assert length(fluid.components) == 1
     pcrit = crit_pure(fluid)[2]
@@ -136,6 +146,31 @@ function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel; N = 100,p_min = 101325
     plot!(fig,s_l, T, label = false, ylabel = "Temperature (K)", xlabel = "Entropy (J/K)", title = "$(fluid.components[1])")
     plot!(fig, s_g, T, label = false)
     return fig
+end
+
+
+function plot_phase_mix(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100, p_min = 101325*0.4)
+  @assert length(fluid.components) >= 2 
+  Tcrit,pcrit,_ = crit_mix(fluid,z)
+  p_array = collect(range(p_min, pcrit, length = N))
+  Tdew(x) = dew_temperature(fluid,x,z)[1]
+  Tbub(x) = bubble_temperature(fluid,x,z)[1]
+  Td = Tdew.(p_array);
+  Tb = Tbub.(p_array);
+  Td[end] = Tcrit;
+  Tb[end] = Tcrit;
+  ThermoCycleGlides.fix_nan!(Td)
+  ThermoCycleGlides.fix_nan!(Tb)
+  sb = similar(Tb);
+  for i in eachindex(Tb)
+      sb[i] = entropy(fluid,p_array[i],Tb[i],z,phase =:liquid)
+  end
+  sd = similar(Td)
+  for i in eachindex(Td)
+    sd[i] = entropy(fluid, p_array[i], Td[i],z,phase =:vapor)
+  end
+  plot!(fig,sb, Tb, label = false, ylabel = "Temperature (K)", xlabel = "Entropy (J/K)", title = "$(fluid.components)")
+  plot!(fig, sd, Td, label = false)
 end
 
 export plot_cycle, plot_phase
