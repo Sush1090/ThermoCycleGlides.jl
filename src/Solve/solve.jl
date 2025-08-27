@@ -86,16 +86,12 @@ function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
 
     h_exp_in = h_evap_out;
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
-
-
-
     h_cond_in = h_exp_out
     T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
     h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
     T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
     T_cond_array = T_cond.(h_cond_array)
-    
     # fix_nan!(T_cond_array)
     T_cond_sf_array = collect(range(prob.T_cond_in, prob.T_cond_out, length=N))
     ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.pp_cond
@@ -134,14 +130,20 @@ end
 
 function solve_ad(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 = (lb + ub) ./ 2 # initial guess
+    # x0 = (lb + ub) ./ 2 # initial guess
+    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
+    x0[1] = maximum(ub)
+    x0[2] = minimum(lb)
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
     return sol, f(sol)
 end
 
 function solve_fd(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 = (lb + ub) ./ 2 # initial guess
+    # x0 = (lb + ub) ./ 2 # initial guess
+    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
+    x0[1] = maximum(ub)
+    x0[2] = minimum(lb)
     sol = constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
     return sol, f(sol)
 end
