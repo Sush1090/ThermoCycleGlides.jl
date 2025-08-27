@@ -11,7 +11,7 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
     fig_phase = plot_phase(fig,prob.fluid,prob.z; N = N, p_min = p_min)
 
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
-    h_comp_in = enthalpy(prob.fluid, p_evap, T_evap_out, phase = :vapor)
+    h_comp_in = enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
     h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
     h_comp_array = collect(range(h_comp_in, h_comp_out, length = N))
     p_comp_array = collect(range(p_evap, p_cond, length = N))
