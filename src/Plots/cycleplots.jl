@@ -106,7 +106,10 @@ function plot_phase(fig::Plots.Plot,prob::ORC;N = 30,p_min = 101325*0.4)
   if length(prob.fluid.components) == 1
     return plot_phase_pure(fig,prob.fluid; N = N, p_min = p_min)
   end
-  throw(error("Phase plot for multicomponent fluids not implemented yet."))
+  if length(prob.fluid.components) >1
+    return plot_phase_mix(fig,prob.fluid,prob.z,N=N,p_min = p_min)
+  end
+  throw(error("IDK what you have passed to the function"))
 end
 
 function plot_phase(fig::Plots.Plot,prob::HeatPump; N = 30,p_min = 101325*0.4)
@@ -114,7 +117,10 @@ function plot_phase(fig::Plots.Plot,prob::HeatPump; N = 30,p_min = 101325*0.4)
   if length(prob.fluid.components) == 1
     return plot_phase_pure(fig,prob.fluid; N = N, p_min = p_min)
   end
-  throw(error("Phase plot for multicomponent fluids not implemented yet."))
+  if length(prob.fluid.components) >1
+    return plot_phase_mix(fig,prob.fluid,prob.z,N=N,p_min = p_min)
+  end
+  throw(error("IDK what you have passed to the function"))
 end
 
 function plot_phase(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100,p_min = 101325*0.4)
