@@ -32,7 +32,7 @@ julia> COP(hp,sol_hp) # Computes COP of Heat pump
 To plot do the following;
 
 ```julia
-plot_cycle(hp,sol_hp,p_min=0.3*sol_hp[1]*101325,N = 1000)
+plot_cycle(hp,sol_hp)
 ```
 
 ![HP_cyclopentane](Images/hp_cyclopentane.png)
@@ -54,7 +54,7 @@ julia> η(orc,sol)
 To plot the ORC cycle: 
 
 ```julia
-julia> plot_cycle(orc,sol,p_min=0.5*sol_hp[2]*101325,N = 1000)
+julia> plot_cycle(orc,sol)
 ```
 
 ![orc_propane](Images/orc_propane.png)
