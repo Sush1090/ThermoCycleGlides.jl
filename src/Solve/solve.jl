@@ -109,15 +109,15 @@ end
 """
 Returns pressures and residues to the problem specificed HP/ORC using AD.
 """
-function solve_ad(prob::HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3)
+function solve_ad(prob::HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
     x0[1] = maximum(ub)
     x0[2] = minimum(lb)
-    sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+    sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
     if norm(f(sol)) > restart_TOL
         x0 = (lb + ub) ./ 2
-        sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+        sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
     end
     return sol, f(sol)
 end
@@ -126,43 +126,45 @@ end
 """
 Returns pressures and residues to the problem specificed HP/ORC using FD. 
 """
-function solve_fd(prob::ThermoCycleGlides.HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3)
-    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
-    x0[1] = maximum(ub)
-    x0[2] = minimum(lb)
-    sol = constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
-    if norm(f(sol)) > restart_TOL
-        x0 = (lb + ub) ./ 2
-        sol = constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
-    end
-    return sol, f(sol)
-end
-
-
-function solve_ad(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3)
-    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
-    x0[1] = maximum(ub)
-    x0[2] = minimum(lb)
-    sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
-    if norm(f(sol)) > restart_TOL
-        x0 = (lb + ub) ./ 2
-        sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
-    end
-    return sol, f(sol)
-end
-
-function solve_fd(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3)
+function solve_fd(prob::HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,fd_order = 2,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     # x0 = (lb + ub) ./ 2 # initial guess
     x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
     x0[1] = maximum(ub)
     x0[2] = minimum(lb)
-    sol = constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+    sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
         if norm(f(sol)) > restart_TOL
         x0 = (lb + ub) ./ 2
-        sol = constrained_newton_fd(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+        sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
+    end
+    return sol, f(sol)
+end
+
+
+
+function solve_ad(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
+    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
+    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
+    x0[1] = maximum(ub)
+    x0[2] = minimum(lb)
+    sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
+    if norm(f(sol)) > restart_TOL
+        x0 = (lb + ub) ./ 2
+        sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
+    end
+    return sol, f(sol)
+end
+
+function solve_fd(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,fd_order = 2,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
+    f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
+    # x0 = (lb + ub) ./ 2 # initial guess
+    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
+    x0[1] = maximum(ub)
+    x0[2] = minimum(lb)
+    sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
+        if norm(f(sol)) > restart_TOL
+        x0 = (lb + ub) ./ 2
+        sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
     end
     return sol, f(sol)
 end
@@ -176,12 +178,12 @@ end
     Define those problems in the respective structs. 
     For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
 """
-function solve(prob::HeatPump;autodiff::Bool=true,N::Int64 = 20)
+function solve(prob::HeatPump;autodiff::Bool=true,N::Int64 = 20,fd_order = 2)
     lb,ub = generate_box_solve_bounds(prob)
     if autodiff
         return sol,res = solve_ad(prob, lb, ub, N = N)
     else
-        return sol,res = solve_fd(prob, lb, ub, N = N)
+        return sol,res = solve_fd(prob, lb, ub, N = N,fd_order = fd_order)
     end
 end
 

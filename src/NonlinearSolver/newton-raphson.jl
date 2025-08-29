@@ -23,7 +23,9 @@ end
 
 function constrained_newton_fd(f::Function,x::Array{T,1},
     lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-8,ftol::TOL=1e-8,iterations::S=100,
-    fd_method::M = central_fdm(2, 1)) where  {T <: Real, S <: Integer, TT <: Real, TTT <: Real, M <: FiniteDifferences.AdaptedFiniteDifferenceMethod,TOL<:Real}
+    fd_order::M = 2) where  {T <: Real, S <: Integer, TT <: Real, TTT <: Real, M <: Int,TOL<:Real}
+
+    fd_method  = central_fdm(fd_order,1)
 
     n = length(x)
     xk = copy(x)
