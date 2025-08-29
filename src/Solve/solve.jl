@@ -109,10 +109,16 @@ end
 """
 Returns pressures and residues to the problem specificed HP/ORC using AD.
 """
-function solve_ad(prob::HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
+function solve_ad(prob::HeatPump,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 = (lb + ub) ./ 2 # initial guess
+    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
+    x0[1] = maximum(ub)
+    x0[2] = minimum(lb)
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+    if norm(f(sol)) > restart_TOL
+        x0 = (lb + ub) ./ 2
+        sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+    end
     return sol, f(sol)
 end
 
@@ -128,13 +134,16 @@ function solve_fd(prob::ThermoCycleGlides.HeatPump,lb::AbstractVector,ub::Abstra
 end
 
 
-function solve_ad(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20)
+function solve_ad(prob::ORC,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    # x0 = (lb + ub) ./ 2 # initial guess
     x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
     x0[1] = maximum(ub)
     x0[2] = minimum(lb)
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+    if norm(f(sol)) > restart_TOL
+        x0 = (lb + ub) ./ 2
+        sol = constrained_newton_ad(f, x0, lb, ub; xtol = 1e-8, ftol = 1e-8, iterations = 100)
+    end
     return sol, f(sol)
 end
 
