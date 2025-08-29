@@ -60,3 +60,28 @@ end
         @test norm(res) < 1e-3
     end
 end
+
+
+@testset "ORC - mixture Non-linear solver FD" begin
+    fluid = cPR(["propane","butane"],idealmodel = ReidIdeal);
+    T_evap_out = 310
+    z = [0.6157894736842106, 9.384210526315789]
+    ΔT_sh = 11.473684210526315 
+    _orc_ = ORC(fluid=fluid, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
+    sol,res = solve(_orc_,N = 30,autodiff = false)
+    @test norm(res) < 1e-3
+end
+
+
+
+@testset "Pure - fluids - easy ORC NL solver" begin
+    for fluid in fluids_test
+        fluid_model = cPR(fluid,idealmodel = ReidIdeal)
+        z = [1.0]
+        T_evap_out = 310
+        ΔT_sh = 5.0 
+        _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
+        sol,res = solve(_orc_,N = 30,autodiff = false)
+        @test norm(res) < 1e-3
+    end
+end
