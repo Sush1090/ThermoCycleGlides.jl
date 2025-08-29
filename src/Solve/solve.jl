@@ -187,12 +187,12 @@ function solve(prob::HeatPump;autodiff::Bool=true,N::Int64 = 20,fd_order = 2)
     end
 end
 
-function solve(prob::ORC;autodiff::Bool=true,N::Int64 = 20)
+function solve(prob::ORC;autodiff::Bool=true,N::Int64 = 20,fd_order = 2)
     lb,ub = generate_box_solve_bounds(prob)
     if autodiff
         return sol,res = solve_ad(prob, lb, ub, N = N)
     else
-        return sol,res = solve_fd(prob, lb, ub, N = N)
+        return sol,res = solve_fd(prob, lb, ub, N = N,fd_order = fd_order)
     end
 end
 
