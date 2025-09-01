@@ -1,4 +1,16 @@
 
+function generate_initial_point(prob::HeatPump,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
+    return [
+        minimum(lb), maximum(ub)
+    ]    
+end
+
+function generate_initial_point(prob::ORC,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
+    return [
+        maximum(ub), minimum(lb)
+    ]    
+end
+
 
 """
 `generate_box_solve_bounds(prob::HeatPump) -> lb, ub`
@@ -12,7 +24,7 @@ function generate_box_solve_bounds(prob::HeatPump)
         throw(error("For now only subcritical heat pumps are supported. Outlet temperature to condenser must be below critical temperature."))
     end
     psat_min = dew_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1]
-    psat_max = bubble_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond + prob.ΔT_sc,prob.z)[1] 
+    psat_max = bubble_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond,prob.z)[1] 
     ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
     lb[1] = psat_min#bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
 
@@ -41,9 +53,8 @@ end
 
 function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 =  zeros(2) #(lb + ub) ./ 2 # initial guess
-    x0[1] = maximum(ub)
-    x0[2] = minimum(lb)
+    T = promote_type(typeof(lb), typeof(ub))
+    x0 = generate_initial_point(prob,lb,ub)
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
     if norm(f(sol)) > restart_TOL
         x0 = (lb + ub) ./ 2
@@ -54,9 +65,7 @@ end
 
 function solve_fd(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,fd_order = 2,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
-    x0 =  zeros(2)
-    x0[1] = maximum(ub)
-    x0[2] = minimum(lb)
+    x0 = generate_initial_point(prob,lb,ub)
     sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
     if norm(f(sol)) > restart_TOL
         x0 = (lb + ub) ./ 2
