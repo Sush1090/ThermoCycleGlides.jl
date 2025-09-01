@@ -5,6 +5,8 @@ using ForwardDiff, CommonSolve,LinearAlgebra
 using Plots
 
 
+abstract type ThermoCycleProblem end
+
 #NonlinearSolver - NR
 include("NonlinearSolver/newton-raphson.jl")
 
