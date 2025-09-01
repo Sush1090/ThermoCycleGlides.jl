@@ -148,3 +148,42 @@ function F(prob::HeatPump,x::AbstractVector{T};N::Int64) where {T<:Real}
 
     return [ΔTpp_evap, ΔTpp_cond]
 end
+
+
+
+"""
+Function that gives specific power ratings for HP by fixing outlet power of compressor to equal 1.
+"""
+function power_ratings(prob::HeatPump,sol::AbstractVector{T}) where T
+    p_evap,p_cond = sol.*101325
+    
+    T_out_evap = dew_temperature(prob.fluid,p_evap,prob.z)[1] + prob.ΔT_sh
+    h_out_evap = enthalpy(prob.fluid,p_evap,T_out_evap,prob.z)
+    h_in_comp = h_out_evap;
+    h_out_comp = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.η_comp, h_in_comp, prob.z, prob.fluid)
+    Δh_comp = h_out_comp - h_in_comp
+    if Δh_comp < 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after compressor should be positive"
+    end
+
+    h_in_cond = h_out_comp
+    T_out_cond = bubble_temperature(prob.fluid,p_cond,prob.z)[1] - prob.ΔT_sc
+    h_out_cond = enthalpy(prob.fluid,p_cond,T_out_cond,prob.z)
+    ΔQ_cond = h_out_cond - h_in_cond
+    if ΔQ_cond > 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after condensation should be negative"
+    end
+    h_in_valve = h_out_cond
+    h_out_valve = h_in_valve
+    Δh_valve = h_in_valve - h_out_valve
+
+    h_in_evap = h_out_valve
+    ΔQ_evap = h_out_evap - h_in_evap
+    if ΔQ_evap < 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after evaporator should be positive"
+    end
+
+    return [Δh_comp/Δh_comp , Δh_valve/Δh_comp , ΔQ_evap/Δh_comp, ΔQ_cond/Δh_comp]
+end
+
+export power_ratings
