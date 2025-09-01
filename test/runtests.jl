@@ -13,11 +13,25 @@ include("fluids.jl")
 
     for fluid in fluids_test
         fluid_model = cPR(fluid,idealmodel = ReidIdeal)
-        z1 = [1.0]
-        T1 = 300; p1 = 101325; p2 = 101325*5;
+        z1 = [1.0]; p1 = 101325;
+        T1 = dew_temperature(fluid_model,p1,z1)[1] + 20;  p2 = 101325*2;
         h1 = enthalpy(fluid_model,p1,T1,z1);
         s1 = Clapeyron.entropy(fluid_model,p1,T1,z1)
         h2= ThermoCycleGlides.isentropic_compressor(p1,p2,1.0,h1,z1,fluid_model)
+        s2 = Clapeyron.PH.entropy(fluid_model,p2,h2,z1)
+        @test isapprox(s1,s2,atol=1e-5)
+    end
+end
+
+@testset "Isentopic pump - Single Component" begin
+
+    for fluid in fluids_test
+        fluid_model = cPR(fluid,idealmodel = ReidIdeal)
+        z1 = [1.0]; p1 = 101325;
+        T1 = bubble_temperature(fluid_model,p1,z1)[1] - 20;  p2 = 101325*2;
+        h1 = enthalpy(fluid_model,p1,T1,z1);
+        s1 = Clapeyron.entropy(fluid_model,p1,T1,z1)
+        h2= ThermoCycleGlides.isentropic_pump(p1,p2,1.0,h1,z1,fluid_model)
         s2 = Clapeyron.PH.entropy(fluid_model,p2,h2,z1)
         @test isapprox(s1,s2,atol=1e-5)
     end
