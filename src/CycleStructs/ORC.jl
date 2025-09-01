@@ -2,7 +2,7 @@
 """
 fluid - `EoSModel`
 """
-mutable struct ORC{T<:Real}
+mutable struct ORC{T<:Real} <: ThermoCycleProblem
     fluid::EoSModel
     z::AbstractVector{T}
     T_evap_in::T
@@ -69,7 +69,7 @@ function ORC(; fluid::EoSModel, z, T_evap_in, T_evap_out, T_cond_in, T_cond_out,
     ΔT_sh_T      = convert(type_promoted, ΔT_sh)
     ΔT_sc_T      = convert(type_promoted, ΔT_sc)
 
-    return ORC(
+    return ORC( 
         fluid,
         z_T,
         T_evap_in_T,
@@ -101,7 +101,7 @@ function η(prob::ORC,sol::AbstractVector{T}) where {T<:Real}
     Tsat_evap = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1]
     h3 = Clapeyron.enthalpy(prob.fluid, p_evap, Tsat_evap + prob.ΔT_sh, prob.z)
     h4 = isentropic_expander(p_evap, p_cond, prob.η_expander, h3, prob.z, prob.fluid)
-    return ((h4-h3) - (h2-h1))/(h3-h2)
+    return ((h4-h3) + (h2-h1))/(h3-h2)
 end
 
 """
@@ -123,3 +123,71 @@ function show_parameters(prob::ORC)
     println("Subcooling: ", prob.ΔT_sc)
 end
 export ORC, η
+
+
+function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
+    @assert length(x) == 2 "x must be a vector of length 2"
+    p_evap,p_cond = x .* 101325 # convert to Pa
+    T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    # @show T_evap_out
+    h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
+
+    h_exp_in = h_evap_out;
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
+    h_cond_in = h_exp_out
+    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
+    h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
+    T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
+    T_cond_array = T_cond.(h_cond_array)
+    # fix_nan!(T_cond_array)
+    T_cond_sf_array = collect(range(prob.T_cond_in, prob.T_cond_out, length=N))
+    ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.pp_cond
+    h_pump_in = h_cond_out
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_pump_in, prob.z, prob.fluid)
+    h_evap_array = collect(range(h_pump_out, h_evap_out, length=N))
+    T_evap(h) = Clapeyron.PH.temperature(prob.fluid, p_evap, h, prob.z)
+    T_evap_array = T_evap.(h_evap_array)
+    # fix_nan!(T_evap_array)
+    T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length=N))
+    ΔTpp_evap = minimum(T_evap_sf_array .- T_evap_array) - prob.pp_evap
+    return [ΔTpp_evap, ΔTpp_cond]#, T_cond_array, T_evap_array, T_cond_sf_array, T_evap_sf_array
+end
+
+
+"""
+Function that gives specific power ratings for ORC by fixing outlet power of expander to equal 1.
+"""
+function power_ratings(prob::ORC,sol::AbstractVector{T}) where T
+    p_evap,p_cond = sol.*101325
+    
+    T_out_evap = dew_temperature(prob.fluid,p_evap,prob.z)[1] + prob.ΔT_sh
+    h_out_evap = enthalpy(prob.fluid,p_evap,T_out_evap,prob.z)
+    h_in_exp = h_out_evap;
+    h_out_exp = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_in_exp, prob.z, prob.fluid)
+    Δh_exp = h_out_exp - h_in_exp
+    if Δh_exp > 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after expansion should be negative"
+    end
+
+    h_in_cond = h_out_exp
+    T_out_cond = bubble_temperature(prob.fluid,p_cond,prob.z)[1] - prob.ΔT_sc
+    h_out_cond = enthalpy(prob.fluid,p_cond,T_out_cond,prob.z)
+    ΔQ_cond = h_out_cond - h_in_cond
+    if ΔQ_cond > 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after condensation should be negative"
+    end
+    h_in_pump = h_out_cond
+    h_out_pump = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_in_pump, prob.z, prob.fluid)
+    Δh_pump = h_out_pump - h_in_pump
+    if Δh_pump < 0 
+         @warn "something wrong in the system. Change in enthalpy of the fluid after pump should be positive"
+    end
+    h_in_evap = h_out_pump
+    ΔQ_evap = h_out_evap - h_in_evap
+    if ΔQ_evap < 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after evaporator should be positive"
+    end
+
+    return [Δh_exp/Δh_exp , Δh_pump/Δh_exp , ΔQ_evap/Δh_exp, ΔQ_cond/Δh_exp]
+end
