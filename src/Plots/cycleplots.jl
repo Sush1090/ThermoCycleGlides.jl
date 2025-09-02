@@ -61,7 +61,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     fig_phase = plot_phase(fig,prob; N = N, p_min = p_min)
     T_pump_in = bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
     h_pump_in = Clapeyron.enthalpy(prob.fluid, p_cond, T_pump_in, prob.z)
-    h_pump_out = ThermoCycleGlides.isentropic_compressor(p_cond, p_evap, prob.η_pump, h_pump_in, prob.z, prob.fluid)
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_pump_in, prob.z, prob.fluid)
     h_pump_array = collect(range(h_pump_in, h_pump_out, length = N))
     T_ph(p,h) = Clapeyron.PH.temperature(prob.fluid, p, h, prob.z)
     T_pump_array = T_ph.(p_cond, h_pump_array)
