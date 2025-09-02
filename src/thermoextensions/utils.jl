@@ -6,7 +6,7 @@ function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Ab
     ha =  h_in + (h_isen - h_in) / η_isen
     #  T_out = Clapeyron.PH.temperature(fluid,p_out,ha,z)
      T_dew = dew_temperature(fluid,p_out,z)[1]
-     h_dew = enthalpy(fluid,p_out,T_dew)
+     h_dew = enthalpy(fluid,p_out,T_dew,phase=:vapour)
      if ha < h_dew
         @warn "Fixing outlet of compressor at saturation temperature"
         return enthalpy(fluid,p_out,T_dew,z,phase = :vapour)
