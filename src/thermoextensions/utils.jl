@@ -8,7 +8,7 @@ function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Ab
      T_dew = dew_temperature(fluid,p_out,z)[1]
      if T_out < T_dew
         @warn "Fixing outlet of compressor at saturation temperature"
-        return enthalpy(fluid,p_out,T_dew,z)
+        return enthalpy(fluid,p_out,T_dew,z,phase = :vapour)
     end
     return ha
 end
