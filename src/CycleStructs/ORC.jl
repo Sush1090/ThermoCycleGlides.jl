@@ -127,6 +127,9 @@ export ORC, η
 
 function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
+    if length(prob.fluid.components) == 1
+        return F_pure(prob,x)
+    end
     p_evap,p_cond = x .* 101325 # convert to Pa
     T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     # @show T_evap_out
@@ -154,6 +157,39 @@ function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
     return [ΔTpp_evap, ΔTpp_cond]#, T_cond_array, T_evap_array, T_cond_sf_array, T_evap_sf_array
 end
 
+
+function F_pure(prob::ORC,x::AbstractVector{T}) where T<:Real
+    @assert length(prob.fluid.components) == 1 "Pure fluid dispatch only"
+    p_evap,p_cond = x .* 101325 # convert to Pa
+    T_evap_out = Clapeyron.saturation_temperature(prob.fluid, p_evap)[1] + prob.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
+    h_exp_in = h_evap_out;
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
+    h_cond_in = h_exp_out
+    T_cond_out = Clapeyron.saturation_temperature(prob.fluid, p_cond)[1] - prob.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
+    T_cond_sat = Clapeyron.saturation_temperature(prob.fluid, p_cond)[1]
+    h_cond_sat_liquid = Clapeyron.enthalpy(prob.fluid,p_cond,T_cond_sat,prob.z,phase = :liquid)
+    h_cond_sat_vapour = Clapeyron.enthalpy(prob.fluid,p_cond,T_cond_sat,prob.z,phase = :vapour)
+    h_cond_array = [h_cond_in,h_cond_sat_vapour,h_cond_sat_liquid,h_cond_out]
+    T_cond_array = Clapeyron.PH.temperature.(prob.fluid,p_cond,h_cond_array,prob.z)
+    T_cond_sf_f(h) = prob.T_cond_out - (h_cond_in - h)*(prob.T_cond_out - prob.T_cond_in)/(h_cond_in - h_cond_out)
+    
+    h_pump_in = h_cond_out
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_pump_in, prob.z, prob.fluid)
+    h_evap_in = h_pump_out
+    T_evap_sat = Clapeyron.saturation_temperature(prob.fluid, p_evap)[1]
+    h_evap_sat_liquid = Clapeyron.enthalpy(prob.fluid,p_evap,T_evap_sat,prob.z,phase = :liquid)
+    h_evap_sat_vapour = Clapeyron.enthalpy(prob.fluid,p_evap,T_evap_sat,prob.z,phase = :vapour)
+    h_evap_array = [h_evap_out,h_evap_sat_vapour,h_evap_sat_liquid,h_pump_out]
+    T_evap_array = Clapeyron.PH.temperature.(prob.fluid,p_evap,h_evap_array,prob.z)
+    T_evap_sf_f(h) = prob.T_evap_in - (h_evap_out - h)*(prob.T_evap_in - prob.T_evap_out)/(h_evap_out - h_evap_in)
+
+    ΔT_evap = minimum(T_evap_sf_f.(h_evap_array) .- T_evap_array) - prob.pp_evap
+    ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.pp_cond
+
+    return [ΔT_evap,ΔT_cond]
+end
 
 """
 Function that gives specific power ratings for ORC by fixing outlet power of expander to equal 1.
