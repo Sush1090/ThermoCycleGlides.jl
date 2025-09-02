@@ -96,7 +96,7 @@ function η(prob::ORC,sol::AbstractVector{T}) where {T<:Real}
     p_evap,p_cond = sol .* 101325 # convert to Pa
     Tsat_cond = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1]
     h1 = Clapeyron.enthalpy(prob.fluid, p_cond, Tsat_cond - prob.ΔT_sc, prob.z)
-    h2 = isentropic_compressor(p_cond, p_evap, prob.η_pump, h1, prob.z, prob.fluid)
+    h2 = isentropic_pump(p_cond, p_evap, prob.η_pump, h1, prob.z, prob.fluid)
 
     Tsat_evap = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1]
     h3 = Clapeyron.enthalpy(prob.fluid, p_evap, Tsat_evap + prob.ΔT_sh, prob.z)
