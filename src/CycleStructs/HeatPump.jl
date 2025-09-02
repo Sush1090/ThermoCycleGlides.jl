@@ -174,7 +174,7 @@ function F_pure(prob::HeatPump,x::AbstractVector{T}) where {T<:Real}
     h_valve_out = h_valve_in # isenthalpic expansion
 
     h_evap_in = h_valve_out
-    h_evap_sat_vapour = Clapeyron.enthalpy(prob.fluid, p_cond, T_sat_evap, prob.z,phase =:vapour)
+    h_evap_sat_vapour = Clapeyron.enthalpy(prob.fluid, p_evap, T_sat_evap, prob.z,phase =:vapour)
     h_evap_array = reverse([h_evap_in,h_evap_sat_vapour,h_evap_out])
     T_evap_array = Clapeyron.PH.temperature.(prob.fluid,p_evap,h_evap_array,prob.z)
     T_evap_sf_f(h) = prob.T_evap_in - (h_evap_out - h)*(prob.T_evap_in - prob.T_evap_out)/(h_evap_out - h_evap_in)
