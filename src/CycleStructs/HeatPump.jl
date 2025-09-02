@@ -170,7 +170,6 @@ function F_pure(prob::HeatPump,x::AbstractVector{T}) where {T<:Real}
     T_cond_array = Clapeyron.PH.temperature.(prob.fluid,p_cond,h_cond_array,prob.z)
     T_cond_sf_f(h) = prob.T_cond_out - (h_cond_in - h)*(prob.T_cond_out - prob.T_cond_in)/(h_cond_in - h_cond_out)
     ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.pp_cond
-    @show T_cond_array,T_cond_sf_f.(h_cond_array)
     h_valve_in = h_cond_out;
     h_valve_out = h_valve_in # isenthalpic expansion
 
