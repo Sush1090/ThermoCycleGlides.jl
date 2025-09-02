@@ -17,7 +17,7 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
     p_comp_array = collect(range(p_evap, p_cond, length = N))
     T_ph(p,h) = Clapeyron.PH.temperature(prob.fluid, p, h, prob.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
-    s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z, phase = :vapor)
+    s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
     s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)
     plot!(fig_phase, s_comp_array, T_comp_array, label = "Compressor", color = :blue)
 
