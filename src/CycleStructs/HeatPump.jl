@@ -261,6 +261,42 @@ function F(prob::HeatPumpRecuperator,x::AbstractVector{T};N::Int64) where {T<:Re
     if length(prob.hp.fluid.components) == 1
         return F_pure(prob,x)
     end    
+    p_evap,p_cond = x .* 101325 # convert to Pa
+    T_sat_evap = dew_temperature(prob.hp.fluid,p_evap,prob.hp.z)[1]
+    T_sat_cond = bubble_temperature(prob.hp.fluid,p_cond,prob.hp.z)[1]
+    T_evap_out = T_sat_evap + prob.hp.ΔT_sh
+
+    T_cond_out = T_sat_cond - prob.hp.ΔT_sc
+    # @show T_evap_out, T_cond_out
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.hp.fluid,prob.ϵ,T_cond_out, p_cond, T_evap_out, p_evap, prob.hp.z)
+    h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z) 
+    h_recup_out_comp_end = h_evap_out + q_ihex
+    h_comp_in = h_recup_out_comp_end;
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
+    h_cond_in = h_comp_out
+    T_cond(h) = Clapeyron.PH.temperature(prob.hp.fluid, p_cond, h, prob.hp.z)
+    T_evap(h) = Clapeyron.PH.temperature(prob.hp.fluid, p_evap, h, prob.hp.z)
+    h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
+    h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
+    T_cond_array = T_cond.(h_cond_array)
+    # fix_nan!(T_cond_array)
+    T_cond_sf_array = collect(range(prob.hp.T_cond_in, prob.hp.T_cond_out, length=N))
+    ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.hp.pp_cond
+
+
+    T_cond_sf_f(h) = prob.hp.T_cond_out - (h_cond_in - h)*(prob.hp.T_cond_out - prob.hp.T_cond_in)/(h_cond_in - h_cond_out)
+    ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.hp.pp_cond
+
+    h_recup_out_valve_end = h_cond_out - q_ihex
+    h_valve_in = h_recup_out_valve_end;
+    h_valve_out = h_valve_in # isenthalpic expansion
+    h_evap_in = h_valve_out
+    h_evap_array = collect(range(h_evap_in, h_evap_out, length=N))
+    T_evap_array = T_evap.(h_evap_array)
+    # fix_nan!(T_evap_array)
+    T_evap_sf_array = collect(range(prob.hp.T_evap_out, prob.hp.T_evap_in, length=N))
+    ΔTpp_evap = minimum(T_evap_sf_array .- T_evap_array) - prob.hp.pp_evap
+    return [ΔTpp_evap, ΔTpp_cond]
 end
 
 
