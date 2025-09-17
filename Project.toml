@@ -1,7 +1,7 @@
 name = "ThermoCycleGlides"
 uuid = "58ad84e6-b92d-4139-8d7e-462257ec6cf0"
 authors = ["Sushrut"]
-version = "0.1.4"
+version = "0.1.5"
 
 [deps]
 Clapeyron = "7c7805af-46cc-48c9-995b-ed0ed2dc909a"
