@@ -12,6 +12,12 @@ function generate_initial_point(prob::ORC,lb::AbstractVector{T},ub::AbstractVect
 end
 
 
+function generate_initial_point(prob::HeatPumpRecuperator,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
+    return [
+        minimum(lb), maximum(ub)
+    ]    
+end
+
 """
 `generate_box_solve_bounds(prob::HeatPump) -> lb, ub`
 Generates lower and upper bounds for the heat pump problem based on its parameters.
@@ -25,6 +31,23 @@ function generate_box_solve_bounds(prob::HeatPump)
     end
     psat_min = dew_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1]
     psat_max = bubble_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond,prob.z)[1] 
+    ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
+    lb[1] = psat_min#bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
+
+    ub[2] = psat_max#dew_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond,prob.z)[1] # condensor pressure
+    lb[2] = psat_min #bubble_pressure(prob.fluid,prob.T_cond_in + prob.pp_cond + prob.ΔT_sc,prob.z)[1] # condensor pressure
+    return lb./101325, ub./101325 # normalize to 101325 Pa
+end
+
+function generate_box_solve_bounds(prob::HeatPumpRecuperator)
+    Tcrit,_,_ = crit_mix(prob.hp.fluid, prob.hp.z)
+    lb = zeros(eltype(prob.hp.z), 2)
+    ub = zeros(eltype(prob.hp.z), 2)
+    if prob.hp.T_cond_out > Tcrit
+        throw(error("For now only subcritical heat pumps are supported. Outlet temperature to condenser must be below critical temperature."))
+    end
+    psat_min = dew_pressure(prob.hp.fluid,prob.hp.T_evap_out - prob.hp.pp_evap - prob.hp.ΔT_sh,prob.hp.z)[1]
+    psat_max = bubble_pressure(prob.hp.fluid,prob.hp.T_cond_out + prob.hp.pp_cond,prob.hp.z)[1]
     ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
     lb[1] = psat_min#bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
 
