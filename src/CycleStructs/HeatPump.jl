@@ -78,12 +78,12 @@ function COP(prob::HeatPump,sol::AbstractVector{T}) where {T<:Real}
 end
 
 
-mutable struct HeatPumpRecuperator{T<:Real}
+mutable struct HeatPumpRecuperator{T<:Real} <:ThermoCycleProblem
     hp::HeatPump{T}
     ϵ::T
 end
 
-function HeatPumpRecuperator(;hp,ϵ)
+function HeatPumpRecuperator(;hp::HeatPump,ϵ)
     @assert ϵ <= 1 "Effictiveness has to be less than 1"
     @assert ϵ >=0 "Effictiveness has to be greater than 0"
     return HeatPumpRecuperator(hp,ϵ)
@@ -218,3 +218,111 @@ function power_ratings(prob::HeatPump,sol::AbstractVector{T}) where T
 end
 
 export power_ratings
+
+
+
+function F_pure(prob::HeatPumpRecuperator,x::AbstractVector{T}) where {T<:Real}
+    @assert length(x) == 2 "x must be a vector of length 2"
+    p_evap,p_cond = x .* 101325 # convert to Pa
+    T_sat_evap = saturation_temperature(prob.hp.fluid,p_evap)[1]
+    T_sat_cond = saturation_temperature(prob.hp.fluid,p_cond)[1]
+    T_evap_out = T_sat_evap + prob.hp.ΔT_sh
+
+    T_cond_out = T_sat_cond - prob.hp.ΔT_sc
+    # @show T_evap_out, T_cond_out
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.hp.fluid,prob.ϵ,T_cond_out, p_cond, T_evap_out, p_evap, prob.hp.z)
+    h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z) 
+    h_recup_out_comp_end = h_evap_out + q_ihex
+    h_comp_in = h_recup_out_comp_end;
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
+    h_cond_in = h_comp_out
+    h_cond_vapour = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_sat_cond, prob.hp.z,phase =:vapour)
+    h_cond_liquid = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_sat_cond, prob.hp.z,phase =:liquid)
+    h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
+    h_cond_array = [h_cond_in,h_cond_vapour,h_cond_liquid,h_cond_out]
+    T_cond_array = Clapeyron.PH.temperature.(prob.hp.fluid,p_cond,h_cond_array,prob.hp.z)
+    T_cond_sf_f(h) = prob.hp.T_cond_out - (h_cond_in - h)*(prob.hp.T_cond_out - prob.hp.T_cond_in)/(h_cond_in - h_cond_out)
+    ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.hp.pp_cond
+
+    h_recup_out_valve_end = h_cond_out - q_ihex
+    h_valve_in = h_recup_out_valve_end;
+    h_valve_out = h_valve_in # isenthalpic expansion
+    h_evap_in = h_valve_out
+    h_evap_sat_vapour = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_sat_evap, prob.hp.z,phase =:vapour)
+    h_evap_array = reverse([h_evap_in,h_evap_sat_vapour,h_evap_out])
+    T_evap_array = Clapeyron.PH.temperature.(prob.hp.fluid,p_evap,h_evap_array,prob.hp.z)
+    T_evap_sf_f(h) = prob.hp.T_evap_in - (h_evap_out - h)*(prob.hp.T_evap_in - prob.hp.T_evap_out)/(h_evap_out - h_evap_in)
+    ΔT_evap = minimum(T_evap_sf_f.(h_evap_array) .- T_evap_array) - prob.hp.pp_evap
+    return [ΔT_cond,ΔT_evap]
+end
+
+function F(prob::HeatPumpRecuperator,x::AbstractVector{T};N::Int64) where {T<:Real}
+    @assert length(x) == 2 "x must be a vector of length 2"
+    if length(prob.hp.fluid.components) == 1
+        return F_pure(prob,x)
+    end    
+end
+
+
+function show_parameters(prob::HeatPumpRecuperator)
+    println("Heat Pump with Recuperator Parameters:")
+    show_parameters(prob.hp)
+    println("Recuperator Effectiveness: ", prob.ϵ)
+end
+
+
+function COP(prob::HeatPumpRecuperator,sol::AbstractVector{T}) where {T<:Real}
+    @assert length(sol) == 2 "Pressure vector p must be of length 2"
+    p_evap,p_cond = sol .* 101325 # convert to Pa
+    T_evap_out = dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
+
+    h_comp_in = h_evap_out;
+    h_comp_out = isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
+
+    T_cond_out = Clapeyron.bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
+
+    return  (h_cond_out - h_comp_out)/(h_comp_out - h_comp_in) 
+end
+
+
+"""
+Function that gives specific power ratings for HP by fixing outlet power of compressor to equal 1.
+"""
+function power_ratings(prob::HeatPumpRecuperator,sol::AbstractVector{T}) where T
+    p_evap,p_cond = sol.*101325
+
+    T_cond_out = bubble_temperature(prob.hp.fluid,p_cond,prob.hp.z)[1] - prob.hp.ΔT_sc
+    T_evap_out = dew_temperature(prob.hp.fluid,p_evap,prob.hp.z)[1] + prob.hp.ΔT_sh
+    h_out_evap = enthalpy(prob.hp.fluid,p_evap,T_evap_out,prob.hp.z)
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.hp.fluid,prob.ϵ,T_cond_out, p_cond, T_evap_out, p_evap, prob.hp.z)
+
+    if q_ihex < 0
+        @warn "Recuperator is cooling the hot stream. T_cond_out < T_evap_out: ($T_cond_out < $T_evap_out)."
+    end
+
+    h_recup_out_comp_end = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z) + q_ihex
+    h_in_comp = h_recup_out_comp_end;
+    h_out_comp = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_in_comp, prob.hp.z, prob.hp.fluid)
+    Δh_comp = h_out_comp - h_in_comp
+    if Δh_comp < 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after compressor should be positive"
+    end
+    h_in_cond = h_out_comp
+    T_out_cond = bubble_temperature(prob.hp.fluid,p_cond,prob.hp.z)[1] - prob.hp.ΔT_sc
+    h_out_cond = enthalpy(prob.hp.fluid,p_cond,T_out_cond,prob.hp.z)
+    ΔQ_cond = h_out_cond - h_in_cond
+    if ΔQ_cond > 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after condensation should be negative"
+    end
+    h_in_valve = h_out_cond - q_ihex
+    h_out_valve = h_in_valve
+    Δh_valve = h_in_valve - h_out_valve
+    h_in_evap = h_out_valve
+    ΔQ_evap = h_out_evap - h_in_evap
+    if ΔQ_evap < 0
+        @warn "something wrong in the system. Change in enthalpy of the fluid after evaporator should be positive"
+    end
+    return [Δh_comp/Δh_comp , Δh_valve/Δh_comp , ΔQ_evap/Δh_comp, ΔQ_cond/Δh_comp, q_ihex/Δh_comp]
+end
