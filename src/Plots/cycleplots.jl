@@ -102,6 +102,82 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     return fig_phase
 end
 
+
+
+function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min = nothing)
+  if isnothing(p_min)
+      p_min = 0.5*sol[1]*101325
+  end
+    fig = plot()
+    p_evap, p_cond = sol .* 101325 # convert to Pa
+    fig_phase = plot_phase(fig,prob.hp.fluid,prob.hp.z; N = N, p_min = p_min)
+
+    T_evap_out = Clapeyron.dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
+    T_cond_out = Clapeyron.bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
+
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.hp.fluid,prob.ϵ,T_cond_out, p_cond, T_evap_out, p_evap, prob.hp.z)
+
+
+
+    h_comp_in =  q_ihex + h_evap_out  #enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
+    h_comp_array = collect(range(h_comp_in, h_comp_out, length = N))
+    p_comp_array = collect(range(p_evap, p_cond, length = N))
+    T_ph(p,h) = Clapeyron.PH.temperature(prob.hp.fluid, p, h, prob.hp.z)
+    T_comp_array = T_ph.(p_comp_array, h_comp_array)
+    s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
+    s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)
+    plot!(fig_phase, s_comp_array, T_comp_array, label = "Compressor", color = :blue)
+
+    # Recuperator
+    h_recoup_evap_in = h_evap_out
+    h_recout_evap_out = h_recoup_evap_in + q_ihex
+    h_recoup_evap_array = collect(range(h_recoup_evap_in, h_recout_evap_out, length = N))
+    T_recoup_comp = T_ph.(p_evap, h_recoup_evap_array)
+    s_recoup_comp = s_ph_vapour.(p_evap, h_recoup_evap_array)
+    plot!(fig_phase, s_recoup_comp, T_recoup_comp, label = "iHEX", color = :black, linestyle = :dash)
+
+    h_recoup_cond_in = h_cond_out
+    h_recout_cond_out = h_recoup_cond_in - q_ihex
+    h_recoup_cond_array = collect(range(h_recoup_cond_in, h_recout_cond_out, length = N))
+    T_recoup_cond = T_ph.(p_cond, h_recoup_cond_array)
+    s_recoup_cond = s_ph_vapour.(p_cond, h_recoup_cond_array)
+    plot!(fig_phase, s_recoup_cond, T_recoup_cond, label = false, color = :black, linestyle = :dash)
+
+    T_cond_out = Clapeyron.bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
+    h_cond_array = collect(range(h_cond_out, h_comp_out, length = N))
+    T_cond_array = T_ph.(p_cond, h_cond_array)
+    s_ph(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
+    s_cond_array = s_ph.(p_cond, h_cond_array)
+    plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
+    h_valve_in = h_cond_out - q_ihex
+    h_valve_out = h_valve_in
+    h_valve_array = collect(range(h_valve_in, h_valve_out, length = N))
+    p_valve_array = collect(range(p_cond, p_evap, length = N))
+    T_valve_array = T_ph.(p_valve_array, h_valve_array)
+    s_valve_array = s_ph.(p_valve_array, h_valve_array)
+    plot!(fig_phase, s_valve_array, T_valve_array, label = "Expansion Valve", color = :green)
+    h_evap_in = h_valve_out
+    T_evap_out = Clapeyron.dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
+    h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
+    T_evap_array = T_ph.(p_evap, h_evap_array)
+    s_evap_array = s_ph.(p_evap, h_evap_array)
+    plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
+
+    # secondary fluids
+    T_cond_sf_array = collect(range(prob.hp.T_cond_in, prob.hp.T_cond_out, length = N))
+    plot!(fig_phase,s_cond_array, T_cond_sf_array, label = "Condenser Secondary Fluid", color = :orange, linestyle = :dash)
+
+    T_evap_sf_array = collect(range(prob.hp.T_evap_out, prob.hp.T_evap_in, length = N))
+    plot!(fig_phase,s_evap_array, T_evap_sf_array, label = "Evaporator Secondary Fluid", color = :purple, linestyle = :dash)
+    return fig_phase
+end
+
+
 function plot_phase(fig::Plots.Plot,prob::ORC;N = 30,p_min = 101325*0.4)
   if length(prob.fluid.components) == 1
     return plot_phase_pure(fig,prob.fluid; N = N, p_min = p_min)
