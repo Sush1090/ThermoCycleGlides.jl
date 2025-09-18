@@ -1,4 +1,9 @@
 
 
-fluids_test = ["dimethyl ether","ammonia","isobutane","Butene","Neopentane","isopentane",
-            "pentane","hexane","acetone","cyclopentane","methanol","heptane","cyclohexane","benzene","propane"]
+fluids_test = ["dimethyl ether","isobutane","Butene","Neopentane","isopentane",
+            "pentane","hexane","acetone","cyclopentane","heptane","cyclohexane","benzene","propane"]
+
+
+fluids_compressor = [
+    "propane", "R134a",  
+]
