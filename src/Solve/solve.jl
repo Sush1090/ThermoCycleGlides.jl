@@ -11,6 +11,12 @@ function generate_initial_point(prob::ORC,lb::AbstractVector{T},ub::AbstractVect
     ]    
 end
 
+function generate_initial_point(prob::ORCEconomizer,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
+    return [
+        maximum(ub), minimum(lb)
+    ]    
+end
+
 
 function generate_initial_point(prob::HeatPumpRecuperator,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
     return [
@@ -73,6 +79,23 @@ function generate_box_solve_bounds(prob::ORC)
     return lb./101325, ub./101325 # normalize to 101325 Pa
 end
 
+
+function generate_box_solve_bounds(prob::ORCEconomizer)
+    Tcrit,_,_ = crit_mix(prob.orc.fluid, prob.orc.z)
+    lb = zeros(eltype(prob.orc.z), 2)
+    ub = zeros(eltype(prob.orc.z), 2)
+    if prob.orc.T_evap_in > Tcrit
+        throw(error("For now only subcritical ORC are supported. Inlet temperature to evaporator must be below critical temperature."))
+    end
+    psat_min = dew_pressure(prob.orc.fluid,prob.orc.T_cond_in,prob.orc.z)[1]
+    psat_max = bubble_pressure(prob.orc.fluid,prob.orc.T_evap_in,prob.orc.z)[1] #pcrit*0.9#dew_pressure(prob.fluid,prob.T_evap_in,prob.z)[1]
+    ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
+    lb[1] = psat_min#bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
+    ub[2] = psat_max
+    lb[2] = psat_min 
+
+    return lb./101325, ub./101325 # normalize to 101325 Pa
+end
 
 function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
