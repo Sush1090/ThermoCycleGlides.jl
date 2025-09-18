@@ -178,6 +178,73 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
 end
 
 
+function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N = 30,p_min = nothing)
+      if isnothing(p_min)
+      p_min = 0.5*sol[2]*101325
+    end
+    fig = plot()
+    p_evap, p_cond = sol .* 101325 # convert to Pa
+    fig_phase = ThermoCycleGlides.plot_phase(fig,prob.orc; N = N, p_min = p_min)
+    T_pump_in = bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1] - prob.orc.ΔT_sc
+    h_pump_in = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_pump_in, prob.orc.z)
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h_pump_in, prob.orc.z, prob.orc.fluid)
+    T_pump_out = Clapeyron.PH.temperature(prob.orc.fluid, p_evap, h_pump_out, prob.orc.z)
+
+    h_pump_array = collect(range(h_pump_in, h_pump_out, length = N))
+    T_ph(p,h) = Clapeyron.PH.temperature(prob.orc.fluid, p, h, prob.orc.z)
+    T_pump_array = T_ph.(p_cond, h_pump_array)
+    s_pt(p,t) = entropy(prob.orc.fluid, p, t, prob.orc.z)
+    s_ph(p,h) = Clapeyron.PH.entropy(prob.orc.fluid, p, h, prob.orc.z)
+    s_pump_array = s_pt.(p_cond, T_pump_array)
+    plot!(fig_phase, s_pump_array, T_pump_array, label = "Pump", color = :blue)
+
+    T_evap_out = dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1] + prob.orc.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
+    h_exp_in = h_evap_out
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.orc.η_expander, h_exp_in, prob.orc.z, prob.orc.fluid)
+    h_exp_array = collect(range(h_exp_in, h_exp_out, length = N))
+    p_exp_array = collect(range(p_evap, p_cond, length = N))
+    T_exp_array = T_ph.(p_exp_array, h_exp_array)
+    s_exp_array = s_ph.(p_exp_array, h_exp_array)
+    plot!(fig_phase, s_exp_array, T_exp_array, label = "Expander", color = :orange)
+    
+    # Economizer
+    h_econ_in = h_exp_out
+    T_exp_out = T_ph(p_cond,h_econ_in)
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.orc.fluid,prob.ϵ,T_exp_out, p_cond, T_pump_out, p_evap, prob.orc.z)
+    h_cond_in = h_econ_in - q_ihex
+    h_evap_in = h_pump_out + q_ihex
+    h_econ_cond_array = collect(range(h_exp_out, h_cond_in, length = N))
+    T_econ_cond = T_ph.(p_cond, h_econ_cond_array)
+    s_econ_cond = s_ph.(p_cond, h_econ_cond_array)
+    plot!(fig_phase, s_econ_cond, T_econ_cond, label = "Economizer", color = :black, linestyle = :dash)
+    h_econ_evap_array = collect(range(h_pump_out, h_evap_in, length = N))
+    T_econ_evap = T_ph.(p_evap, h_econ_evap_array)
+    s_econ_evap = s_ph.(p_evap, h_econ_evap_array)
+    plot!(fig_phase, s_econ_evap, T_econ_evap, label = false, color = :black, linestyle = :dash)
+
+
+    h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
+    T_evap_array = T_ph.(p_evap, h_evap_array)
+    s_evap_array = s_ph.(p_evap, h_evap_array)
+    plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
+
+
+    T_cond_out = bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1] - prob.orc.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_cond_out, prob.orc.z)
+    h_cond_array = collect(range(h_cond_in, h_cond_out, length = N))
+    T_cond_array = T_ph.(p_cond, h_cond_array)
+    s_cond_array = s_ph.(p_cond, h_cond_array)
+    plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
+    # secondary fluids
+    T_evap_sf_array = collect(range(prob.orc.T_evap_out, prob.orc.T_evap_in, length = N))
+    plot!(fig_phase, s_evap_array, T_evap_sf_array, label = "Evaporator Secondary Fluid", color = :purple, linestyle = :dash)
+    T_cond_sf_array = collect(range(prob.orc.T_cond_out, prob.orc.T_cond_in, length = N))
+    plot!(fig_phase, s_cond_array, T_cond_sf_array, label = "Condenser Secondary Fluid", color = :orange, linestyle = :dash)
+    # @show minimum(T_evap_sf_array .- T_evap_array)
+    return fig_phase
+end
+
 function plot_phase(fig::Plots.Plot,prob::ORC;N = 30,p_min = 101325*0.4)
   if length(prob.fluid.components) == 1
     return plot_phase_pure(fig,prob.fluid; N = N, p_min = p_min)
