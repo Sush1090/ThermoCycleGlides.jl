@@ -2,7 +2,7 @@ module ThermoCycleGlides
 # Write your package code here.
 using Clapeyron, Polynomials, Interpolations, FiniteDifferences
 using ForwardDiff, CommonSolve,LinearAlgebra
-using Plots
+using Plots, StaticArrays
 
 
 abstract type ThermoCycleProblem end
