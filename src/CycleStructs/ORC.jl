@@ -227,3 +227,110 @@ function power_ratings(prob::ORC,sol::AbstractVector{T}) where T
 
     return [Δh_exp/Δh_exp , Δh_pump/Δh_exp , ΔQ_evap/Δh_exp, ΔQ_cond/Δh_exp]
 end
+
+mutable struct ORCEconomizer{T<:Real} <: ThermoCycleProblem
+    orc::ORC{T}
+    ϵ::T
+end
+
+function ORCEconomizer(; orc::ORC, ϵ::Real)
+    @assert 0.0 ≤ ϵ < 1.0 "Economizer effectiveness must be in [0, 1)"
+    type_promoted = promote_type(eltype(orc.z), typeof(ϵ))
+    ϵ_T = convert(type_promoted, ϵ)
+    return ThermoCycleGlides.ORCEconomizer(orc, ϵ_T)
+end
+
+function F_pure(prob::ORCEconomizer,x::AbstractVector{T}) where T<:Real
+    @assert length(prob.orc.fluid.components) == 1 "Pure fluid dispatch only"
+    p_evap,p_cond = x .* 101325 # convert to Pa
+    T_sat_evap = Clapeyron.saturation_temperature(prob.orc.fluid, p_evap)[1]
+    T_sat_cond = Clapeyron.saturation_temperature(prob.orc.fluid, p_cond)[1]
+    T_evap_out = Clapeyron.saturation_temperature(prob.orc.fluid, p_evap)[1] + prob.orc.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
+    h_exp_in = h_evap_out;
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.orc.η_expander, h_exp_in, prob.orc.z, prob.orc.fluid)
+    T_exp_out = Clapeyron.PH.temperature(prob.orc.fluid, p_cond, h_exp_out, prob.orc.z)
+
+    T_cond_out = Clapeyron.saturation_temperature(prob.orc.fluid, p_cond)[1] - prob.orc.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_cond_out, prob.orc.z)
+    h_pump_in = h_cond_out
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h_pump_in, prob.orc.z, prob.orc.fluid)
+    T_pump_out = Clapeyron.PH.temperature(prob.orc.fluid, p_evap, h_pump_out, prob.orc.z)
+
+    q_ihex = IHEX_Q(prob.orc.fluid, prob.ϵ,T_exp_out,p_cond,T_pump_out,p_evap,prob.orc.z)
+
+    h_evap_in = h_pump_out + q_ihex
+    h_cond_in = h_exp_out - q_ihex
+
+    h_evap_sat_liquid = Clapeyron.enthalpy(prob.orc.fluid,p_evap,T_sat_evap,prob.orc.z,phase = :liquid)
+    h_evap_sat_gas = Clapeyron.enthalpy(prob.orc.fluid,p_evap,T_sat_evap,prob.orc.z,phase = :vapour)
+    h_evap_array = [h_evap_out,h_evap_sat_gas,h_evap_sat_liquid,h_evap_in]
+    T_evap_array = Clapeyron.PH.temperature.(prob.orc.fluid,p_evap,h_evap_array,prob.orc.z)
+    T_evap_sf_f(h) = prob.orc.T_evap_in - (h_evap_out - h)*(prob.orc.T_evap_in - prob.orc.T_evap_out)/(h_evap_out - h_evap_in)
+    ΔT_evap = minimum(T_evap_sf_f.(h_evap_array) .- T_evap_array) - prob.orc.pp_evap
+
+    h_cond_sat_liquid = Clapeyron.enthalpy(prob.orc.fluid,p_cond,T_sat_cond,prob.orc.z,phase = :liquid)
+    h_cond_sat_gas = Clapeyron.enthalpy(prob.orc.fluid,p_cond,T_sat_cond,prob.orc.z,phase = :vapour)
+    h_cond_array = [h_cond_in,h_cond_sat_gas,h_cond_sat_liquid,h_cond_out]
+    T_cond_array = Clapeyron.PH.temperature.(prob.orc.fluid,p_cond  ,h_cond_array,prob.orc.z)
+    T_cond_sf_f(h) = prob.orc.T_cond_out - (h_cond_in - h)*(prob.orc.T_cond_out - prob.orc.T_cond_in)/(h_cond_in - h_cond_out)
+    ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.orc.pp_cond
+    return [ΔT_evap,ΔT_cond]
+end
+
+
+
+function F(prob::ORCEconomizer,x::AbstractVector{T};N::Int64) where {T<:Real}
+    @assert length(x) == 2 "x must be a vector of length 2"
+    if length(prob.orc.fluid.components) == 1
+        return F_pure(prob,x)
+    end
+    p_evap,p_cond = x .* 101325 # convert to Pa
+    T_sat_evap = Clapeyron.dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1]
+    T_sat_cond = Clapeyron.bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1]
+    T_evap_out = T_sat_evap + prob.orc.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
+    h_exp_in = h_evap_out;
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.orc.η_expander, h_exp_in, prob.orc.z, prob.orc.fluid)
+    T_exp_out = Clapeyron.PH.temperature(prob.orc.fluid, p_cond, h_exp_out, prob.orc.z)
+    T_cond_out = T_sat_cond - prob.orc.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_cond_out, prob.orc.z)
+    h_pump_in = h_cond_out
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h_pump_in, prob.orc.z, prob.orc.fluid)
+    T_pump_out = Clapeyron.PH.temperature(prob.orc.fluid, p_evap, h_pump_out, prob.orc.z)
+    q_ihex = IHEX_Q(prob.orc.fluid, prob.ϵ,T_exp_out,p_cond,T_pump_out,p_evap,prob.orc.z)
+    h_evap_in = h_pump_out + q_ihex
+    h_cond_in = h_exp_out - q_ihex
+    h_evap_array = collect(range(h_evap_out, h_evap_in, length=N))
+    T_evap(h) = Clapeyron.PH.temperature(prob.orc.fluid, p_evap, h, prob.orc.z)
+    T_evap_array = T_evap.(h_evap_array)
+    T_evap_sf(h) = prob.orc.T_evap_in - (h_evap_out - h)*(prob.orc.T_evap_in - prob.orc.T_evap_out)/(h_evap_out - h_evap_in)
+    T_evap_sf_array = T_evap_sf.(h_evap_array)
+    ΔTpp_evap = minimum(T_evap_sf_array .- T_evap_array) - prob.orc.pp_evap
+    h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
+    T_cond(h) = Clapeyron.PH.temperature(prob.orc.fluid, p_cond, h, prob.orc.z)
+    T_cond_array = T_cond.(h_cond_array)
+    T_cond_sf(h) = prob.orc.T_cond_in + (h - h_cond_out)*(prob.orc.T_cond_out - prob.orc.T_cond_in)/(h_cond_in - h_cond_out)
+    T_cond_sf_array = T_cond_sf.(h_cond_array)
+    ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.orc.pp_cond
+    return [ΔTpp_evap, ΔTpp_cond]#, T_cond_array,
+end
+
+
+function η(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector{T}) where {T<:Real}
+    @assert length(sol) == 2 "Pressure vector p must be of length 2"
+    p_evap,p_cond = sol .* 101325 # convert to Pa
+    Tsat_cond = Clapeyron.bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1]
+    h1 = Clapeyron.enthalpy(prob.orc.fluid, p_cond, Tsat_cond - prob.orc.ΔT_sc, prob.orc.z)
+    h2 = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h1, prob.orc.z, prob.orc.fluid)
+    T2 = Clapeyron.PH.temperature(prob.orc.fluid, p_evap, h2, prob.orc.z)
+    Tsat_evap = Clapeyron.dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1]
+    h3 = Clapeyron.enthalpy(prob.orc.fluid, p_evap, Tsat_evap + prob.orc.ΔT_sh, prob.orc.z)
+    h4 = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.orc.η_expander, h3, prob.orc.z, prob.orc.fluid)
+    T4 = Clapeyron.PH.temperature(prob.orc.fluid, p_cond, h4, prob.orc.z)
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.orc.fluid, prob.ϵ,T4,p_cond,T2,p_evap,prob.orc.z)
+    h2_new = h2 + q_ihex
+    return ((h4-h3) + (h2-h1))/(h3-h2_new)
+end
+
+export ORCEconomizer
