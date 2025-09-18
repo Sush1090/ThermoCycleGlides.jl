@@ -110,46 +110,107 @@ export HeatPump, HeatPumpRecuperator, COP, show_parameters
 
 
 
-"""
-returns the residues of the pinch points for `HeatPump`
-"""
-function F(prob::HeatPump,x::AbstractVector{T};N::Int64) where {T<:Real}
+# """
+# returns the residues of the pinch points for `HeatPump`
+# """
+# function F(prob::HeatPump,x::AbstractVector{T};N::Int64) where {T<:Real}
+#     @assert length(x) == 2 "x must be a vector of length 2"
+#     if length(prob.fluid.components) == 1
+#         return F_pure(prob,x)
+#     end
+#     # @show x
+#     p_evap,p_cond = x .* 101325 # convert to Pa
+#     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh 
+#     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
+
+#     h_comp_in = h_evap_out; 
+#     # @show h_comp_in, p_evap,p_cond
+#     h_comp_out = isentropic_compressor(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
+#     # @show h_comp_out
+#     T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+#     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
+#     h_cond_in = h_comp_out
+
+#     T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
+#     T_evap(h) = Clapeyron.PH.temperature(prob.fluid, p_evap, h, prob.z)
+
+#     h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
+#     T_cond_array = T_cond.(h_cond_array)
+#     # fix_nan!(T_cond_array)
+#     T_cond_sf_array = collect(range(prob.T_cond_in, prob.T_cond_out, length=N))
+    
+#     ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.pp_cond
+#     h_valve_in = h_cond_out;
+#     h_valve_out = h_valve_in # isenthalpic expansion
+
+#     h_evap_array = collect(range(h_valve_out, h_evap_out, length=N))
+#     T_evap_array = T_evap.(h_evap_array)
+#     # fix_nan!(T_evap_array)
+#     T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length=N))
+#     ΔTpp_evap = minimum(T_evap_sf_array .- T_evap_array) - prob.pp_evap
+
+#     return [ΔTpp_evap, ΔTpp_cond]
+# end
+
+function F(prob::HeatPump, x::AbstractVector{T}; N::Int) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
+
     if length(prob.fluid.components) == 1
-        return F_pure(prob,x)
+        return F_pure(prob, x)
     end
-    # @show x
-    p_evap,p_cond = x .* 101325 # convert to Pa
-    T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh 
+
+    p_evap = x[1] * 101_325
+    p_cond = x[2] * 101_325
+
+    # evaporator outlet
+    T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
 
-    h_comp_in = h_evap_out; 
-    # @show h_comp_in, p_evap,p_cond
-    h_comp_out = isentropic_compressor(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
-    # @show h_comp_out
+    # compressor
+    h_comp_out = isentropic_compressor(p_evap, p_cond, prob.η_comp,
+                                       h_evap_out, prob.z, prob.fluid)
+
+    # condenser outlet
     T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
-    h_cond_in = h_comp_out
 
-    T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
-    T_evap(h) = Clapeyron.PH.temperature(prob.fluid, p_evap, h, prob.z)
+    # ----------------------------------
+    # Condenser pinch point
+    # ----------------------------------
+    ΔTpp_cond = begin
+        Δmin = typemax(T)
+        for i in 0:N-1
+            α = i / (N-1)
+            h = (1-α) * h_cond_out + α * h_comp_out
+            T_hx  = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
+            T_sf  = (1-α) * prob.T_cond_in + α * prob.T_cond_out
+            Δ     = T_hx - T_sf
+            if Δ < Δmin
+                Δmin = Δ
+            end
+        end
+        Δmin - prob.pp_cond
+    end
 
-    h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
-    T_cond_array = T_cond.(h_cond_array)
-    # fix_nan!(T_cond_array)
-    T_cond_sf_array = collect(range(prob.T_cond_in, prob.T_cond_out, length=N))
-    
-    ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.pp_cond
-    h_valve_in = h_cond_out;
-    h_valve_out = h_valve_in # isenthalpic expansion
+    # ----------------------------------
+    # Evaporator pinch point
+    # ----------------------------------
+    ΔTpp_evap = begin
+        Δmin = typemax(T)
+        for i in 0:N-1
+            α = i / (N-1)
+            h = (1-α) * h_cond_out + α * h_evap_out   # linear enthalpy spacing
+            T_hx  = Clapeyron.PH.temperature(prob.fluid, p_evap, h, prob.z)
+            T_sf  = (1-α) * prob.T_evap_out + α * prob.T_evap_in
+            Δ     = T_sf - T_hx
+            if Δ < Δmin
+                Δmin = Δ
+            end
+        end
+        Δmin - prob.pp_evap
+    end
 
-    h_evap_array = collect(range(h_valve_out, h_evap_out, length=N))
-    T_evap_array = T_evap.(h_evap_array)
-    # fix_nan!(T_evap_array)
-    T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length=N))
-    ΔTpp_evap = minimum(T_evap_sf_array .- T_evap_array) - prob.pp_evap
-
-    return [ΔTpp_evap, ΔTpp_cond]
+    return SVector(ΔTpp_evap, ΔTpp_cond)  # avoids heap allocations
 end
 
 function F_pure(prob::HeatPump,x::AbstractVector{T}) where {T<:Real}
@@ -312,11 +373,11 @@ function COP(prob::HeatPumpRecuperator,sol::AbstractVector{T}) where {T<:Real}
     p_evap,p_cond = sol .* 101325 # convert to Pa
     T_evap_out = dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
-
-    h_comp_in = h_evap_out;
+    T_cond_out = bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.hp.fluid,prob.ϵ,T_cond_out, p_cond, T_evap_out, p_evap, prob.hp.z)
+    h_comp_in = h_evap_out + q_ihex;
     h_comp_out = isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
 
-    T_cond_out = Clapeyron.bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
 
     return  (h_cond_out - h_comp_out)/(h_comp_out - h_comp_in) 
