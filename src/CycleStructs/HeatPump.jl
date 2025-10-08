@@ -27,7 +27,7 @@ function HeatPump(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in,T_cond_out,Î
     @assert Î”T_sc >= 0 "Subcooling temperature must be non-negative"
 
     # Thermodynamic assertions
-    # For heat-pump the inlet temperature of the condensor should be higher than inelt temperature of the evaporator
+    # For heat-pump the inlet temperature of the condensor should be higher than outlet temperature of the evaporator
     @assert T_cond_in > T_evap_out "Condenser inlet temperature must be higher than evaporator outlet temperature for the heat pump to function properly"
     # inlet temperature of the condensor should be subcritical - pinch point
     Tcrit,_,_ = crit_mix(fluid,z)
