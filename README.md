@@ -61,3 +61,17 @@ julia> plot_cycle(orc,sol,N=300)
 
 ![orc_propane](Images/orc_propane.png)
 
+To see the details of `SolutionState` do the following
+
+```julia
+julia> show_parameters(sol)
+Iterations: 4
+Function calls: 10
+Final residual norm: 1.2710574864626038e-13
+Final x: [27.24650730298343, 8.310317977639695]
+Final lenx: 8.321091160516346e-7
+Final lenf: 3.7257249981036476e-6
+Lower bounds: [5.8848010540583715, 5.8848010540583715]
+Upper bounds: [31.19314765995761, 31.19314765995761]
+Autodiff: true
+```
