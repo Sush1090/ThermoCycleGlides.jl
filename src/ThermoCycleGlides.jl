@@ -1,11 +1,14 @@
 module ThermoCycleGlides
 # Write your package code here.
 using Clapeyron, Polynomials, Interpolations, FiniteDifferences
-using ForwardDiff, CommonSolve,LinearAlgebra
-using Plots, StaticArrays
+using ForwardDiff, CommonSolve, LinearAlgebra
+using Plots, StaticArrays,Metaheuristics
 
+import LinearAlgebra: norm, rank
 
 abstract type ThermoCycleProblem end
+
+abstract type ThermoCycleSolution end
 
 #NonlinearSolver - NR
 include("NonlinearSolver/newton-raphson.jl")
