@@ -1,4 +1,19 @@
 
+
+"""
+`SolutionState` -  A struct to hold the solution state of the nonlinear solver.
+
+- `x::Vector{T}`: The solution vector.
+- `f_calls::I`: The number of function calls made during the solving process.
+- `iterations::I`: The number of iterations taken to converge.
+- `residuals::Vector{T}`: The residuals at the solution.
+- `lb::Vector{T}`: The lower bounds used in the solver.
+- `ub::Vector{T}`: The upper bounds used in the solver.
+- `autodiff::Bool`: A flag indicating whether automatic differentiation was used.
+- `fd_order::I`: The order of finite difference used if autodiff is false.
+- `lenx::T`: The final change in the solution vector.
+- `lenf::T`: The final change in the residuals.
+"""
 struct SolutionState{T<:Real,I<:Integer}
     x::Vector{T}
     f_calls::I
