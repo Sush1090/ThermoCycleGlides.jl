@@ -1,3 +1,40 @@
+
+struct SolutionState{T<:Real,I<:Integer}
+    x::Vector{T}
+    f_calls::I
+    iterations::I
+    residuals::Vector{T}
+    lb::Vector{T}
+    ub::Vector{T}
+    autodiff::Bool
+    fd_order::I
+    lenx::T
+    lenf::T
+
+    function SolutionState(x, f_calls, iterations, residuals,
+                           lb, ub, autodiff, fd_order, lenx, lenf)
+        T = promote_type(eltype(x), eltype(residuals), eltype(lb), eltype(ub), typeof(lenx), typeof(lenf))
+        I = promote_type(typeof(f_calls), typeof(iterations), typeof(fd_order))
+        new{T,I}(x, f_calls, iterations, residuals, lb, ub, autodiff, fd_order, lenx, lenf)
+    end
+end
+
+function show_parameters(sol::SolutionState)
+    println("Iterations: ", sol.iterations)
+    println("Function calls: ", sol.f_calls)
+    println("Final residual norm: ", norm(sol.residuals))
+    println("Final x: ", sol.x)
+    println("Final lenx: ", sol.lenx)
+    println("Final lenf: ", sol.lenf)
+    println("Lower bounds: ", sol.lb)
+    println("Upper bounds: ", sol.ub)
+    println("Autodiff: ", sol.autodiff)
+    if !sol.autodiff
+        println("Finite difference order: ", sol.fd_order)
+    end
+    return nothing
+end
+
 function box_projection(x::Array{T,1},lb::Array{TT,1},ub::Array{TTT,1}) where {T <: Real, TT <: Real, TTT <: Real}
     y = copy(x)
     for i in eachindex(x)
@@ -22,7 +59,7 @@ end
 
 
 function constrained_newton_fd(f::Function,x::Array{T,1},
-    lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-8,ftol::TOL=1e-8,iterations::S=100,
+    lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-16,ftol::TOL=1e-16,iterations::S=100,
     fd_order::M = 2) where  {T <: Real, S <: Integer, TT <: Real, TTT <: Real, M <: Int,TOL<:Real}
 
     fd_method  = central_fdm(fd_order,1)
@@ -32,13 +69,16 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
     xn = similar(x)
     jk = Array{T,2}(undef,n,n)
 
-    lenx = zero(T)
-    lenf = zero(T)
+    lenx = one(T)
+    lenf = one(T)
 
     iter = 0
+
+    f_calls = 0
+
     while true
         jk .= FiniteDifferences.jacobian(fd_method,f,xk)[1]
-   
+        f_calls += (2*fd_order + 1)*n # approx number of function calls for finite difference jacobian
         if !all(isfinite,jk)
             error("The jacobian has non-finite elements")
         end
@@ -50,12 +90,12 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
          
             xn .= xk - (jk'jk + λ*I)\(jk'f(xk))
         end
-
+        f_calls += 1 # for f(xk) call above
         box_projection!(xn,lb,ub)
         # @show xn
 
-        lenx = maximum(abs,norm((xn.-xk))/norm(xk))
-        lenf = maximum(abs,norm((f(xn).-f(xk)))/norm(f(xk)))
+        lenx = norm((xn.-xk))
+        lenf = norm((f(xn).-f(xk)))
         # @show lenx,lenf
     
         xk .= xn
@@ -68,12 +108,11 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
   
     end
   
-    return xk
-
+    return SolutionState(xk,f_calls,iter,f(xk),lb,ub,false,fd_order,lenx,lenf)
 end
 
 function constrained_newton_ad(f::Function,x::Array{T,1},
-    lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-8,ftol::TOL=1e-8,iterations::S=100) where 
+    lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-16,ftol::TOL=1e-16,iterations::S=100) where 
     {T <: Real, S <: Integer, TT <: Real, TTT <: Real,TOL<:Real}
 
     type_promoted = promote_type(eltype(x), eltype(lb), eltype(ub))
@@ -82,17 +121,16 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
     xn = similar(x)
     jk = similar(x, type_promoted, n, n)
     # @show x, jn, 
+    iter_ = 0
+    f_calls = 0
+    lenx = one(T)
+    lenf = one(T)
     for iter in 1:iterations
         jk = ForwardDiff.jacobian(f, xk)
-
+        f_calls += 1
         fx = f(xk)
-        # @show jk
-        # if cond(jk) < 1e10
-            xn = xk - jk \ fx
-        # else
-            # λ = 1e-3
-            # xn .= xk - (jk' * jk + λ * I) \ (jk' * fx)
-        # end
+        xn = xk - jk \ fx
+        f_calls += 1
 
         # simple box projection (not differentiable, but works if outside AD path)
         for i in eachindex(xn)
@@ -102,8 +140,9 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         if norm(xn - xk) < xtol || norm(f(xn)) < ftol
             break
         end
-        lenx = maximum(abs,norm((xn.-xk))/norm(xk))
-        lenf = maximum(abs,norm((f(xn).-f(xk)))/norm(f(xk)))
+        lenx = maximum(abs,norm((xn.-xk)))
+        lenf = maximum(abs,norm((f(xn).-f(xk))))
+        iter_ += 1
         if iter >= iterations || (lenx <= xtol || lenf <= ftol)
             break
         end
@@ -111,6 +150,7 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         xk = xn
     end
 
-    return xk
+    return SolutionState(xk,f_calls,iter_,f(xk),lb,ub,true,0,lenx,lenf)
 end
 
+export SolutionState
