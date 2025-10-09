@@ -380,3 +380,8 @@ function power_ratings(prob::HeatPumpRecuperator,sol::AbstractVector{T}) where T
     end
     return [Δh_comp/Δh_comp , Δh_valve/Δh_comp , ΔQ_evap/Δh_comp, ΔQ_cond/Δh_comp, q_ihex/Δh_comp]
 end
+
+
+function COP(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState)
+    return COP(prob,sol.x)
+end
