@@ -334,3 +334,7 @@ function η(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector{T}) where 
 end
 
 export ORCEconomizer
+
+function η(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState)
+    return η(prob,sol.x)
+end
