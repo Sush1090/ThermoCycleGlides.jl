@@ -1,4 +1,5 @@
 
+
 """
 Plots TS diagram
 """
@@ -323,3 +324,8 @@ function plot_phase_mix(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 10
 end
 
 export plot_cycle, plot_phase
+
+
+function plot_cycle(prob::ThermoCycleProblem,sol::SolutionState;N = 30,p_min = nothing)
+    return plot_cycle(prob,sol.x;N = N,p_min = p_min)
+end
