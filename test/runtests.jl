@@ -1,4 +1,4 @@
-using ThermoCycleGlides, Clapeyron, LinearAlgebra
+using ThermoCycleGlides, Clapeyron
 using Test
 
 
@@ -57,8 +57,8 @@ end
     z = [0.6157894736842106, 9.384210526315789]
     ΔT_sh = 11.473684210526315 
     _orc_ = ORC(fluid=fluid, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-    sol,res = solve(_orc_,N = 30)
-    @test norm(res) < 1e-3
+    sol = solve(_orc_,N = 30,ftol = 1e-8,xtol = 1e-8)
+    @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
 end
 
 
@@ -70,8 +70,8 @@ end
         T_evap_out = 310
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol,res = solve(_orc_,N = 30)
-        @test norm(res) < 1e-3
+        sol = solve(_orc_,N = 30,ftol = 1e-8,xtol = 1e-8)
+        @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
     end
 end
 
@@ -82,8 +82,8 @@ end
     z = [0.6157894736842106, 9.384210526315789]
     ΔT_sh = 11.473684210526315 
     _orc_ = ORC(fluid=fluid, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-    sol,res = solve(_orc_,N = 30,autodiff = false)
-    @test norm(res) < 1e-3
+    sol = solve(_orc_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
+    @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
 end
 
 
@@ -95,8 +95,8 @@ end
         T_evap_out = 310
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol,res = solve(_orc_,N = 30,autodiff = true)
-        @test norm(res) < 1e-3
+        sol = solve(_orc_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
+        @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
     end
 end
 
@@ -107,8 +107,8 @@ end
         T_evap_out = 340
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=360, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol,res = solve(_orc_,N = 30,autodiff = false)
-        @test norm(res) < 1e-3
+        sol = solve(_orc_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
+        @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
     end
 end
 
@@ -119,13 +119,13 @@ end
         T_evap_out = 340
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=360, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol,res = solve(_orc_,N = 30,autodiff = false)
+        sol = solve(_orc_,N = 30,autodiff = false)
         ϵ = 0.7
         _orc_econ_ = ORCEconomizer(_orc_,ϵ)
-        sol_e,res_e = solve(_orc_econ_,N = 30,autodiff = false)
-        
-        @test norm(res_e) < 1e-3
-        @test abs(η(_orc_econ_,sol_e)) >= abs(η(_orc_,sol))
+        sol_e = solve(_orc_econ_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
+
+        @test ThermoCycleGlides.norm(sol_e.residuals) < 1e-3
+        @test abs(η(_orc_econ_,sol_e.x)) >= abs(η(_orc_,sol.x))
     end
 end
 
@@ -136,8 +136,8 @@ end
         T_evap_out = 300
         ΔT_sh = 5.0 
         _hp_ = HeatPump(fluid=fluid_model, z=z, T_evap_in=310, T_evap_out=T_evap_out, T_cond_in=340, T_cond_out=355, η_comp=0.75, pp_evap=2, pp_cond=2, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol,res = solve(_hp_,N = 30,autodiff = false)
-        @test norm(res) < 1e-3
+        sol = solve(_hp_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
+        @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
     end
 end
 
@@ -150,10 +150,10 @@ end
         ΔT_sh = 5.0 
         hp_ = HeatPump(fluid=fluid_model, z=z, T_evap_in=310, T_evap_out=T_evap_out, T_cond_in=340, T_cond_out=355, η_comp=0.75, pp_evap=2, pp_cond=2, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         ϵ = 0.4
-        sol_hp,res_hp = solve(hp_,N = 30,autodiff = true)
+        sol_hp = solve(hp_,N = 30,autodiff = true)
         _hp_ = HeatPumpRecuperator(hp_,ϵ)
-        sol,res = solve(_hp_,N = 30,autodiff = true)
-        @test norm(res) < 1e-3
+        sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
+        @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
         # @test abs(COP(_hp_,sol)) >= abs(COP(hp_,sol_hp))
     end
 end
