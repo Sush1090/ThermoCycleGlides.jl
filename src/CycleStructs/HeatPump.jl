@@ -381,7 +381,27 @@ function power_ratings(prob::HeatPumpRecuperator,sol::AbstractVector{T}) where T
     return [Δh_comp/Δh_comp , Δh_valve/Δh_comp , ΔQ_evap/Δh_comp, ΔQ_cond/Δh_comp, q_ihex/Δh_comp]
 end
 
+"""
+    COP(prob::ThermoCycleGlides.ThermoCycleProblem, sol::SolutionState) -> Float64
 
+Computes the coefficient of performance (COP) of a thermodynamic cycle given the 
+problem definition and its corresponding solution state.
+
+# Arguments
+- `prob::ThermoCycleGlides.ThermoCycleProblem`: The thermodynamic cycle problem 
+  containing fluid models, boundary conditions, and component parameters.
+- `sol::SolutionState`: The solution state object containing the converged 
+  state variables (`x`), residuals, and convergence information.
+"""
 function COP(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState)
     return COP(prob,sol.x)
 end
+
+
+# function check_hp_parameters(prob::HeatPump)
+#     if prob.ΔT_sc > prob.T_cond_out - prob.T_cond_in
+#         @warn "Subcooling temperature is more than the temperature difference of the sf in the condenser. Change ΔT_sc or T_cond_in/out. Solver might not converge."
+#     end
+#     Tcrit,_,_ = crit_mix(prob.fluid, prob.z)
+#     if 
+# end

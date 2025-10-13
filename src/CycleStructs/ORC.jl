@@ -1,6 +1,24 @@
 
 """
-fluid - `EoSModel`
+   ORC{T<:Real} <: ThermoCycleProblem
+
+Defines an Organic Rankine Cycle (ORC) problem with thermodynamic and design 
+parameters specified in Kelvin and dimensionless efficiencies.
+
+# Fields
+- `fluid::EoSModel`: Equation of State (EoS) model representing the working fluid.
+- `z::AbstractVector{T}`: Mole fraction composition vector of the working fluid.
+- `T_evap_in::T`: Inlet temperature of the evaporator [K].
+- `T_evap_out::T`: Outlet temperature of the evaporator [K].
+- `ΔT_sh::T`: Degree of superheating at the expander inlet [K].
+- `T_cond_in::T`: Inlet temperature of the condenser [K].
+- `T_cond_out::T`: Outlet temperature of the condenser [K].
+- `ΔT_sc::T`: Degree of subcooling at the pump inlet [K].
+- `η_pump::T`: Isentropic efficiency of the pump [-].
+- `η_expander::T`: Isentropic efficiency of the expander [-].
+- `pp_evap::T`: Minimum temperature difference (pinch point) at the evaporator [K].
+- `pp_cond::T`: Minimum temperature difference (pinch point) at the condenser [K].
+
 """
 mutable struct ORC{T<:Real} <: ThermoCycleProblem
     fluid::EoSModel
@@ -228,6 +246,17 @@ function power_ratings(prob::ORC,sol::AbstractVector{T}) where T
     return [Δh_exp/Δh_exp , Δh_pump/Δh_exp , ΔQ_evap/Δh_exp, ΔQ_cond/Δh_exp]
 end
 
+
+"""
+        ORCEconomizer{T<:Real} <: ThermoCycleProblem
+
+Defines an Organic Rankine Cycle (ORC) configuration with an economiser (regenerative heat exchanger),
+extending the base `ORC` problem with a specified effectiveness.
+
+# Fields
+- `orc::ORC{T}`: Base ORC system definition containing the thermodynamic parameters.
+- `ϵ::T`: Effectiveness of the economiser (regenerator) [-].
+"""
 mutable struct ORCEconomizer{T<:Real} <: ThermoCycleProblem
     orc::ORC{T}
     ϵ::T
@@ -335,6 +364,27 @@ end
 
 export ORCEconomizer
 
+
+"""
+    η(prob::ThermoCycleGlides.ThermoCycleProblem, sol::SolutionState) -> Float64
+
+Computes the thermal efficiency of a thermodynamic cycle given a problem definition 
+and its corresponding solution state.
+
+# Arguments
+- `prob::ThermoCycleGlides.ThermoCycleProblem`: The thermodynamic cycle problem 
+  containing fluid properties, boundary conditions, and component parameters.
+- `sol::SolutionState`: The solution state object containing the converged 
+  state variables (`x`), residuals, and convergence information.
+
+# Returns
+- `Float64`: The computed cycle efficiency, defined as the ratio of net work 
+  output to heat input.
+
+# Notes
+This method acts as a wrapper that extracts the solution vector `x` from 
+`sol` and calls the lower-level `η(prob, x)` implementation.
+"""
 function η(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState)
     return η(prob,sol.x)
 end
