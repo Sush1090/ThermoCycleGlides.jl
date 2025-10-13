@@ -31,4 +31,7 @@ include("Optimizations/Optimize.jl")
 #Plotting
 include("Plots/cycleplots.jl")
 
+
+# PrecompileTools
+include("precompile.jl")
 end
