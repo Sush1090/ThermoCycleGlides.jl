@@ -93,11 +93,11 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
     lenx = one(T)
     lenf = one(T)
 
-    iter = 0
+    iter_ = 0
 
     f_calls = 0
 
-    while true
+    for iter in 1:iterations
         jk .= first(FiniteDifferences.jacobian(fd_method,f,xk))
         f_calls += fd_order*n # approx number of function calls for finite difference jacobian
         if !all(isfinite,jk)
@@ -113,25 +113,20 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
         end
         f_calls += 1 # for f(xk) call above
         box_projection!(xn,lb,ub)
-        # @show xn
 
         lenx = norm((xn.-xk))
-        lenf = norm((f(xn).-f(xk)))
-        # @show lenx,lenf
-    
+        lenf = norm(f(xn))
+
         xk .= xn
 
-        iter += 1
-        if norm(xn - xk) < xtol || norm(f(xn)) < ftol
-            break
-        end
-        if iter >= iterations || (lenx <= xtol || lenf <= ftol)
+        iter_ += 1
+        if iter_ >= iterations || (lenx <= xtol || lenf <= ftol)
             break
         end
   
     end
   
-    return SolutionState(xk,f_calls,iter,f(xk),lb,ub,false,fd_order,lenx,lenf,:unknown)
+    return SolutionState(xk,f_calls,iter_,f(xk),lb,ub,false,fd_order,lenx,lenf,:unknown)
 end
 
 function constrained_newton_ad(f::Function,x::Array{T,1},
@@ -159,12 +154,8 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         for i in eachindex(xn)
             xn[i] = clamp(xn[i], lb[i], ub[i])
         end
-
-        if norm(xn - xk) < xtol || norm(f(xn)) < ftol
-            break
-        end
-        lenx = maximum(abs,norm((xn.-xk)))
-        lenf = maximum(abs,norm((f(xn).-f(xk))))
+        lenx = norm((xn.-xk))
+        lenf = norm(f(xn))
         iter_ += 1
         if iter >= iterations || (lenx <= xtol || lenf <= ftol)
             break
