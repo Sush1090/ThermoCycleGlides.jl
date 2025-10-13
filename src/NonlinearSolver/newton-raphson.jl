@@ -122,7 +122,9 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
         xk .= xn
 
         iter += 1
-
+        if norm(xn - xk) < xtol || norm(f(xn)) < ftol
+            break
+        end
         if iter >= iterations || (lenx <= xtol || lenf <= ftol)
             break
         end
