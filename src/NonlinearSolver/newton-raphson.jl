@@ -98,8 +98,8 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
     f_calls = 0
 
     while true
-        jk .= FiniteDifferences.jacobian(fd_method,f,xk)[1]
-        f_calls += (2*fd_order + 1)*n # approx number of function calls for finite difference jacobian
+        jk .= first(FiniteDifferences.jacobian(fd_method,f,xk))
+        f_calls += fd_order*n # approx number of function calls for finite difference jacobian
         if !all(isfinite,jk)
             error("The jacobian has non-finite elements")
         end
