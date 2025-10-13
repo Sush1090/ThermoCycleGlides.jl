@@ -145,7 +145,7 @@ end
     Define those problems in the respective structs. 
     For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
 """
-function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-16,ftol = 1e-16,max_iter= 1000)
+function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-6,ftol = 1e-6,max_iter= 1000)
         lb,ub = generate_box_solve_bounds(prob)
     if autodiff
         return sol = solve_ad(prob, lb, ub, N = N, restart_TOL = restart_TOL, xtol = xtol, ftol = ftol, max_iter = max_iter)
