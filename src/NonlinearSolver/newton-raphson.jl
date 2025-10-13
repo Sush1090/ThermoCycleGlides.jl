@@ -13,8 +13,9 @@
 - `fd_order::I`: The order of finite difference used if autodiff is false.
 - `lenx::T`: The final change in the solution vector.
 - `lenf::T`: The final change in the residuals.
+- `soltype::Symbol`: A symbol indicating the type of cycle (:unknown,:subcritical,:transcritical). This will be updated with the cycle type after solving.
 """
-struct SolutionState{T<:Real,I<:Integer}
+mutable struct SolutionState{T<:Real,I<:Integer}
     x::Vector{T}
     f_calls::I
     iterations::I
@@ -25,12 +26,16 @@ struct SolutionState{T<:Real,I<:Integer}
     fd_order::I
     lenx::T
     lenf::T
-
+    soltype::Symbol
     function SolutionState(x, f_calls, iterations, residuals,
-                           lb, ub, autodiff, fd_order, lenx, lenf)
-        T = promote_type(eltype(x), eltype(residuals), eltype(lb), eltype(ub), typeof(lenx), typeof(lenf))
+                           lb, ub, autodiff, fd_order, lenx, lenf, soltype)
+        T = promote_type(eltype(x), eltype(residuals), eltype(lb), eltype(ub),
+                         typeof(lenx), typeof(lenf))
         I = promote_type(typeof(f_calls), typeof(iterations), typeof(fd_order))
-        new{T,I}(x, f_calls, iterations, residuals, lb, ub, autodiff, fd_order, lenx, lenf)
+        new{T,I}(Vector{T}(x), convert(I, f_calls), convert(I, iterations),
+                  Vector{T}(residuals), Vector{T}(lb), Vector{T}(ub),
+                  autodiff, convert(I, fd_order),
+                  convert(T, lenx), convert(T, lenf), soltype)
     end
 end
 
@@ -47,6 +52,7 @@ function show_parameters(sol::SolutionState)
     if !sol.autodiff
         println("Finite difference order: ", sol.fd_order)
     end
+    println("Solution type: ", sol.soltype)
     return nothing
 end
 
@@ -123,7 +129,7 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
   
     end
   
-    return SolutionState(xk,f_calls,iter,f(xk),lb,ub,false,fd_order,lenx,lenf)
+    return SolutionState(xk,f_calls,iter,f(xk),lb,ub,false,fd_order,lenx,lenf,:unknown)
 end
 
 function constrained_newton_ad(f::Function,x::Array{T,1},
@@ -165,7 +171,7 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         xk = xn
     end
 
-    return SolutionState(xk,f_calls,iter_,f(xk),lb,ub,true,0,lenx,lenf)
+    return SolutionState(xk,f_calls,iter_,f(xk),lb,ub,true,0,lenx,lenf,:unknown)
 end
 
 export SolutionState
