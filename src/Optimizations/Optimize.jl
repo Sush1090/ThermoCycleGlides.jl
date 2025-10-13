@@ -1,58 +1,55 @@
 """
-Maximize COP for the cycle. 
-    Select Var on prob to optimize:
-    from heat pump continous variables are : [z, T_evap_in, T_evap_out, T_cond_in, T_cond_out, η_comp, pp_evap, pp_cond, ΔT_sh, ΔT_sc]
-    For these [η_comp, pp_evap, pp_cond] are fixed for the cycle.
-    For a Heat pump -> target temperature glide for the condensor is a necessity. Hence [T_cond_in, T_cond_out] are fixed. And inlet to evaporator of secondary fluid is fixed.
-    Hence we can only optimize [z,T_evap_out,ΔT_sc,ΔT_sh]. z can only be optimized if fluid is a mixture.
+optimize(prob::ThermoCycleProblem; kwargs...)
+
+Its goal is to find the optimal subcooling and superheating values that maximize the cycle performance (COP or ORC -efficiency).
+
+This should return the optimized cycle struct and the result from Metaheuristics
 """
-function generate_opt_fun(hp::HeatPump, opt_fields::Vector{String})
-    all_syms = fieldnames(typeof(hp))
-    opt_syms = Symbol.(opt_fields)
-
-    # Validate optimisation field names
-    for s in opt_syms
-        if !(s in all_syms)
-            error("Invalid field name: $s")
+function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm; autodiff::Bool = true,N::Int = 20,lower = 2.0,tol = 1e-3,xtol = 1e-6,ftol = 1e-6,max_iter= 1000)
+        ub = max(abs(prob.T_cond_out - prob.T_evap_out),abs(prob.T_evap_out - prob.T_cond_in)) # upper bound on subcooling & superheating
+        ub = ones(2) * ub
+        lb = ones(2) * lower # lower bound on subcooling & superheating
+        bounds  = Metaheuristics.BoxConstrainedSpace(lb = lb, ub = ub)
+        soltemp = deepcopy(prob)
+        function obj(x)
+            try
+                prob_ = deepcopy(prob)
+                prob_.ΔT_sc = x[2]
+                prob_.ΔT_sh = x[1]
+                sol = solve(prob_,autodiff = autodiff,N = N,xtol = xtol,ftol = ftol,max_iter = max_iter)
+                if norm(sol.residuals) > tol
+                    return 0.0
+                else
+                    if prob isa HeatPump || prob isa HeatPumpRecuperator
+                        return COP(prob_,sol)
+                    elseif prob isa ORC || prob isa ORCEconomizer
+                        return η(prob_,sol)
+                    end
+                end
+            catch
+                return 0.0
+            end
         end
-    end
+        if algo.options.parallel_evaluation == true
+            function obj_parallel(x)
+                fitness = zeros(size(X,1))
+                Threads.@threads for i in eachindex(x)
+                    fitness[i] = obj(x[i])
+                end
+                return fitness
+            end
+            result = Metaheuristics.optimize(obj_parallel,bounds,algo)
+            soltemp.ΔT_sc = result.best_sol.x[2]
+            soltemp.ΔT_sh = result.best_sol.x[1]
+            return result,soltemp
+        end
 
-    # Return a function that updates via NamedTuple splatting (no Dict)
-    function update_fun(x::AbstractVector{T}) where {T<:Real}
-        vals = (; zip(all_syms, getfield.(Ref(hp), all_syms))...)
-        updated_vals = merge(vals, NamedTuple{opt_syms}(x))
-        return HeatPump(; updated_vals...)
-    end
-
-    return update_fun
+        if algo.options.parallel_evaluation == false
+            result = Metaheuristics.optimize(obj,bounds,algo)
+                        soltemp.ΔT_sc = result.best_sol.x[2]
+            soltemp.ΔT_sh = result.best_sol.x[1]
+            return result,soltemp
+        end
 end
 
-
-function obj(obj_fun_update::Function,x::AbstractVector{T};autodiff::Bool=true,N::Int=20) where {T<:Real}
-    prob = obj_fun_update(x)
-    sol,res = solve(prob, autodiff = autodiff,N = N)
-    if norm(res) > 1e-2
-        @warn "The solution did not converge. Residues: $res, norm: $(norm(res))"
-    end
-    return COP(prob,sol)
-end
-
-
-# function optimize_hp(prob::HeatPump, opt_fields::Vector{String};
-#     iterations::Int=100, xtol::Real=1e-8, ftol::Real=1e-8, autodiff::Bool=true, N::Int=20)
-
-#     # Generate the update function for the HeatPump
-#     obj_fun_update = generate_opt_fun(prob, opt_fields)
-
-#     # Define the objective function
-#     obj_fun(x) = obj(obj_fun_update, x; autodiff=autodiff, N=N)
-
-#     # Initial guess for optimization
-#     x0 = zeros(eltype(prob.z), length(opt_fields))
-
-#     # Perform optimization
-#     result = optimize(obj_fun, x0, BFGS(); maxiters=iterations, xtol=xtol, ftol=ftol)
-
-#     return result
-    
-# end
+export optimize
