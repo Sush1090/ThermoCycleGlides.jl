@@ -1,5 +1,5 @@
 module ThermoCycleGlides
-# Write your package code here.
+
 using Clapeyron, Polynomials, Interpolations, FiniteDifferences
 using ForwardDiff, CommonSolve, LinearAlgebra
 using Plots, StaticArrays,Metaheuristics
@@ -27,7 +27,7 @@ include("CycleStructs/HeatPump.jl")
 #solve
 include("Solve/solve.jl")
 
-#opt
+#Optimization
 include("Optimizations/Optimize.jl")
 
 
@@ -38,12 +38,12 @@ include("Plots/cycleplots.jl")
 # PrecompileTools
 include("precompile.jl")
 
-function show(prob::ThermoCycleProblem)
-    show_parameters(prob)
-end
-function show(sol::SolutionState)
-    show_parameters(sol)
-end
+    function show(prob::ThermoCycleProblem)
+        show_parameters(prob)
+    end
+    function show(sol::SolutionState)
+        show_parameters(sol)
+    end
 
-export show
+    export show
 end
