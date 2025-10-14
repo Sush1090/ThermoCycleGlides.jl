@@ -5,6 +5,9 @@ using ForwardDiff, CommonSolve, LinearAlgebra
 using Plots, StaticArrays,Metaheuristics
 
 import LinearAlgebra: norm, rank
+import Base: show, length, copy, similar, promote_type
+
+
 
 abstract type ThermoCycleProblem end
 
@@ -34,4 +37,13 @@ include("Plots/cycleplots.jl")
 
 # PrecompileTools
 include("precompile.jl")
+
+function show(prob::ThermoCycleProblem)
+    show_parameters(prob)
+end
+function show(sol::SolutionState)
+    show_parameters(sol)
+end
+
+export show
 end
