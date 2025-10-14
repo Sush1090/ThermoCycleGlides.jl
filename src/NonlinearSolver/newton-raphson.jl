@@ -114,7 +114,7 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
         f_calls += 1 # for f(xk) call above
         box_projection!(xn,lb,ub)
 
-        lenx = norm((xn.-xk))
+        lenx = norm((xn.-xk))/norm(xk)
         lenf = norm(f(xn))
 
         xk .= xn
@@ -126,7 +126,7 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
   
     end
   
-    return SolutionState(xk,f_calls,iter_,f(xk),lb,ub,false,fd_order,lenx,lenf,:unknown)
+    return SolutionState(xn,f_calls,iter_,f(xn),lb,ub,false,fd_order,lenx,lenf,:unknown)
 end
 
 function constrained_newton_ad(f::Function,x::Array{T,1},
@@ -154,7 +154,7 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         for i in eachindex(xn)
             xn[i] = clamp(xn[i], lb[i], ub[i])
         end
-        lenx = norm((xn.-xk))
+        lenx = norm((xn.-xk))/norm(xk)
         lenf = norm(f(xn))
         iter_ += 1
         if iter >= iterations || (lenx <= xtol || lenf <= ftol)
@@ -164,7 +164,7 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         xk = xn
     end
 
-    return SolutionState(xk,f_calls,iter_,f(xk),lb,ub,true,0,lenx,lenf,:unknown)
+    return SolutionState(xn,f_calls,iter_,f(xn),lb,ub,true,0,lenx,lenf,:unknown)
 end
 
 export SolutionState
