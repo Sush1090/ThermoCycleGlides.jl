@@ -248,7 +248,7 @@ end
 
 function plot_phase(fig::Plots.Plot,prob::ORC;N = 30,p_min = 101325*0.4)
   if length(prob.fluid.components) == 1
-    return plot_phase_pure(fig,prob.fluid; N = N, p_min = p_min)
+    return plot_phase_pure(fig,prob.fluid,prob.z; N = N, p_min = p_min)
   end
   if length(prob.fluid.components) >1
     return plot_phase_mix(fig,prob.fluid,prob.z,N=N,p_min = p_min)
@@ -259,7 +259,7 @@ end
 function plot_phase(fig::Plots.Plot,prob::HeatPump; N = 30,p_min = 101325*0.4)
 
   if length(prob.fluid.components) == 1
-    return plot_phase_pure(fig,prob.fluid; N = N, p_min = p_min)
+    return plot_phase_pure(fig,prob.fluid,prob.z; N = N, p_min = p_min)
   end
   if length(prob.fluid.components) >1
     return plot_phase_mix(fig,prob.fluid,prob.z,N=N,p_min = p_min)
@@ -269,7 +269,7 @@ end
 
 function plot_phase(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100,p_min = 101325*0.4)
   if length(z) == 1
-    return plot_phase_pure(fig,fluid,N = N,p_min = p_min)
+    return plot_phase_pure(fig,fluid,z,N = N,p_min = p_min)
   end
   if length(z) > 1
     return plot_phase_mix(fig,fluid,z,N=N,p_min = p_min)
@@ -277,7 +277,7 @@ function plot_phase(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100,p_
   throw(error("IDK what you have passed to the function"))
 end
 
-function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel; N = 100,p_min = 101325*0.4)
+function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector; N = 100,p_min = 101325*0.4)
     @assert length(fluid.components) == 1
     pcrit = crit_pure(fluid)[2]
     p_array = collect(range(p_min, pcrit, length = N))
@@ -286,11 +286,11 @@ function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel; N = 100,p_min = 101325
     T[end] = crit_pure(fluid)[1]
     s_l = similar(T)
     for i in eachindex(T)
-        s_l[i] = entropy(fluid,p_array[i],T[i],phase =:liquid)
+        s_l[i] = entropy(fluid,p_array[i],T[i],z,phase =:liquid)
     end
     s_g = similar(T)
     for i in eachindex(T)
-        s_g[i] = entropy(fluid, p_array[i], T[i],phase =:vapor)
+        s_g[i] = entropy(fluid, p_array[i], T[i],z,phase =:vapor)
     end
 
     plot!(fig,s_l, T, label = false, ylabel = "Temperature (K)", xlabel = "Entropy (J/K)", title = "$(fluid.components[1])")
