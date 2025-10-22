@@ -405,3 +405,97 @@ end
 #     Tcrit,_,_ = crit_mix(prob.fluid, prob.z)
 #     if 
 # end
+
+
+function F_super(prob::HeatPump,x::AbstractVector,pcrit::Real,Tcrit::Real;N::Int = 30)
+    p_evap = x[1] * 101_325
+    p_cond = pcrit*x[2]
+
+    T_evap_out = bubble_temperature(prob.fluid,p_evap,prob.z)[1] + prob.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.fluid,p_evap,T_evap_out,prob.z,phase = :vapour)
+    
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap,p_cond,prob.η_comp,h_evap_out,prob.z,prob.fluid)
+    T_comp_out = Clapeyron.PH.temperature(prob.fluid,p_cond,h_comp_out,prob.z)
+    
+    T_cond_in = T_comp_out
+    h_cond_in = h_comp_out
+
+    T_cond_out = Tcrit - prob.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.fluid,p_cond,T_cond_out,prob.z,phase = :liquid)
+
+    h_cond_array = collect(range(h_cond_in,h_cond_out,length = N))
+    T_cond_array = Clapeyron.PH.temperature.(Ref(prob.fluid),Ref(p_cond),h_cond_array,Ref(prob.z))
+
+    T_cond_sf_array = collect(range(prob.T_cond_out,prob.T_cond_in,length = N))
+
+    h_valve_in = h_cond_out
+    h_valve_out = h_valve_in
+    h_evap_in = h_valve_out
+    T_sat_evap = dew_temperature(prob.fluid,p_evap,prob.z)[1]
+    h_evap_sat = Clapeyron.enthalpy(prob.fluid,p_evap,T_sat_evap,prob.z,phase = :vapour)
+    h_evap_array = [h_evap_out,h_evap_sat,h_evap_in]
+
+    T_evap_array = Clapeyron.PH.temperature.(Ref(prob.fluid),Ref(p_evap),h_evap_array,Ref(prob.z))
+    T_evap_sf_array_f(h) = prob.T_evap_in - (h_evap_out - h)*(prob.T_evap_in - prob.T_evap_out)/(h_evap_out - h_evap_in)
+    T_evap_sf_array = T_evap_sf_array_f.(h_evap_array)
+
+    return [minimum(T_evap_sf_array .- T_evap_array ) - prob.pp_evap ,minimum(T_cond_array .- T_cond_sf_array) - prob.pp_cond]
+end
+
+
+function power_ratings(prob::ThermoCycleProblem,sol::SolutionState)
+    return power_ratings(prob,sol.x)
+end
+
+
+
+function _F(prob::HeatPump, x::AbstractVector{T}) where {T<:Real}
+    @assert length(x) == 2 "x must be a vector of length 2"
+    @assert length(prob.z) != 1 "This implementation is for mixtures"
+
+    p_evap = x[1] * 101_325
+    p_cond = x[2] * 101_325
+
+    # evaporator outlet
+    T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
+
+    # compressor
+    h_comp_out = isentropic_compressor(p_evap, p_cond, prob.η_comp,
+                                       h_evap_out, prob.z, prob.fluid)
+    h_cond_in = h_comp_out
+    T_cond_in = Clapeyron.PH.temperature(prob.fluid,p_cond,h_cond_in,prob.z)
+    T_cond_dew = dew_temperature(prob.fluid,p_cond,prob.z)[1]
+    T_cond_bub = bubble_temperature(prob.fluid,p_cond,prob.z)[1]
+    h_cond_vapour = Clapeyron.enthalpy(prob.fluid,p_cond,T_cond_dew,prob.z)
+    h_cond_liquid = Clapeyron.enthalpy(prob.fluid,p_cond,T_cond_bub,prob.z)
+    # condenser outlet
+    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
+
+    # ----------------------------------
+    # Condenser pinch point
+    # ----------------------------------
+    h_cond_array = [h_cond_in,h_cond_vapour,h_cond_liquid,h_cond_out]
+    T_cond_array = [T_cond_in,T_cond_dew,T_cond_bub,T_cond_out] 
+    T_cond_sf_f(h) = prob.T_cond_out - (h_cond_in - h)*(prob.T_cond_out - prob.T_cond_in)/(h_cond_in - h_cond_out)
+    ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.pp_cond
+    # ----------------------------------
+    # Evaporator pinch point
+    # ----------------------------------
+    h_valve_in = h_cond_out;
+    h_valve_out = h_valve_in # isenthalpic expansion
+
+    h_evap_in = h_valve_out
+    T_evap_dew = dew_temperature(prob.fluid,p_evap,prob.z)[1]
+    h_evap_sat_vapour = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_dew, prob.z,phase =:vapour)
+    h_evap_array = reverse([h_evap_in,h_evap_sat_vapour,h_evap_out])
+    T_evap_array = similar(h_evap_array)
+    for i in eachindex(h_evap_array)
+        T_evap_array[i] = Clapeyron.PH.temperature(prob.fluid,p_evap,h_evap_array[i],prob.z)
+    end
+    
+    T_evap_sf_f(h) = prob.T_evap_in - (h_evap_out - h)*(prob.T_evap_in - prob.T_evap_out)/(h_evap_out - h_evap_in)
+    ΔTpp_evap = minimum(T_evap_sf_f.(h_evap_array) .- T_evap_array) - prob.pp_evap
+    return [ΔTpp_evap, ΔTpp_cond]  # avoids heap allocations
+end
