@@ -59,6 +59,7 @@ end
     _orc_ = ORC(fluid=fluid, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
     sol = solve(_orc_,N = 30,ftol = 1e-8,xtol = 1e-8)
     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+    @test sol.soltype == :subcritical
 end
 
 
@@ -72,6 +73,7 @@ end
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         sol = solve(_orc_,N = 30,ftol = 1e-8,xtol = 1e-8)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+        @test sol.soltype == :subcritical
     end
 end
 
@@ -84,6 +86,7 @@ end
     _orc_ = ORC(fluid=fluid, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
     sol = solve(_orc_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+    @test sol.soltype == :subcritical
 end
 
 
@@ -97,6 +100,7 @@ end
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         sol = solve(_orc_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+        @test sol.soltype == :subcritical
     end
 end
 
@@ -109,6 +113,7 @@ end
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=360, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         sol = solve(_orc_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+        @test sol.soltype == :subcritical
     end
 end
 
@@ -120,12 +125,14 @@ end
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=360, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         sol = solve(_orc_,N = 30,autodiff = false)
+        @test sol.soltype == :subcritical
         ϵ = 0.7
         _orc_econ_ = ORCEconomizer(_orc_,ϵ)
         sol_e = solve(_orc_econ_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
 
         @test ThermoCycleGlides.norm(sol_e.residuals) < 1e-3
         @test abs(η(_orc_econ_,sol_e.x)) >= abs(η(_orc_,sol.x))
+        @test sol_e.soltype == :subcritical
     end
 end
 
@@ -138,6 +145,7 @@ end
         _hp_ = HeatPump(fluid=fluid_model, z=z, T_evap_in=310, T_evap_out=T_evap_out, T_cond_in=340, T_cond_out=355, η_comp=0.75, pp_evap=2, pp_cond=2, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         sol = solve(_hp_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+        @test sol.soltype == :subcritical
     end
 end
 
@@ -154,6 +162,7 @@ end
         _hp_ = HeatPumpRecuperator(hp_,ϵ)
         sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+        @test sol.soltype == :subcritical
         # @test abs(COP(_hp_,sol)) >= abs(COP(hp_,sol_hp))
     end
 end
