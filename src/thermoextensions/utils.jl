@@ -9,11 +9,12 @@ function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Ab
     if p_out < pcrit
         T_dew = dew_temperature(fluid,p_out,z)[1]
         h_dew = enthalpy(fluid,p_out,T_dew,z,phase=:vapour)
-    end
-     if ha < h_dew
+        if ha < h_dew
         # @warn "Fixing outlet of compressor at saturation temperature"
-        return enthalpy(fluid,p_out,T_dew,z,phase = :vapour)
+            return enthalpy(fluid,p_out,T_dew,z,phase = :vapour)
+        end
     end
+
     return ha
 end
 
@@ -47,4 +48,9 @@ function IHEX_Q(fluid::EoSModel,ϵ::T1,T_in_left::T2,p_in_left::T3,T_in_right::T
     Qmax = C*(T_in_left - T_in_right)
     Q = Qmax*ϵ
     return Q
+end
+
+
+function glide_match_coeff(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState;N::Int = 20)
+
 end
