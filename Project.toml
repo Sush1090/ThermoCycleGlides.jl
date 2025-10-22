@@ -19,7 +19,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-Clapeyron = "0.6.15"
+Clapeyron = "0.6.17"
 CommonSolve = "0.2.4"
 FiniteDifferences = "0.12.32"
 ForwardDiff = "0.10,1"
