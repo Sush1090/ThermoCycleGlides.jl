@@ -33,11 +33,11 @@ function generate_box_solve_bounds(prob::HeatPump)
     lb = zeros(eltype(prob.z), 2)
     ub = zeros(eltype(prob.z), 2)
     if prob.T_cond_out > Tcrit
-        psat_max = 0.95*pcrit 
+        psat_max = 0.99*pcrit 
     else 
         psat_max = bubble_pressure(prob.fluid,prob.T_cond_out + prob.pp_cond + prob.ΔT_sc,prob.z)[1] 
         if !isfinite(psat_max)
-            psat_max = 0.95*pcrit 
+            psat_max = 0.99*pcrit 
         end
     end
 
@@ -81,11 +81,11 @@ function generate_box_solve_bounds(prob::HeatPumpRecuperator)
 end
 
 function generate_box_solve_bounds(prob::ORC)
-    Tcrit,_,_ = crit_mix(prob.fluid, prob.z)
+    Tcrit,pcrit,_ = crit_mix(prob.fluid, prob.z)
     lb = zeros(eltype(prob.z), 2)
     ub = zeros(eltype(prob.z), 2)
     if prob.T_evap_in > Tcrit
-        throw(error("For now only subcritical ORC are supported. Inlet temperature to evaporator must be below critical temperature."))
+         psat_max = 0.95*pcrit
     end
     psat_min = dew_pressure(prob.fluid,prob.T_cond_in,prob.z)[1]
     psat_max = bubble_pressure(prob.fluid,prob.T_evap_in - prob.ΔT_sh,prob.z)[1] #pcrit*0.9#dew_pressure(prob.fluid,prob.T_evap_in,prob.z)[1]
@@ -120,7 +120,12 @@ function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector
     T = promote_type(typeof(lb), typeof(ub))
     x0 = generate_initial_point(prob,lb,ub)
     sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
+    sol.soltype = :subcritical
     if norm(sol.residuals)  > restart_TOL
+        # f(x::AbstractVector{T}) where {T<:Real} = F_transcritical(prob, x,N = N)
+        # x0 = generate_bounds(prob,lb,ub)
+        # sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
+        # sol.soltype = :transcritical
         x0 = (lb + ub) ./ 2
         sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
     end
@@ -131,6 +136,7 @@ function solve_fd(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     x0 = generate_initial_point(prob,lb,ub)
     sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
+    sol.soltype = :subcritical
     if norm(sol.residuals) > restart_TOL
         x0 = (lb + ub) ./ 2
         sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
@@ -146,7 +152,7 @@ end
     For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
 """
 function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-6,ftol = 1e-6,max_iter= 1000)
-        lb,ub = generate_box_solve_bounds(prob)
+    lb,ub = generate_box_solve_bounds(prob)
     if autodiff
         return sol = solve_ad(prob, lb, ub, N = N, restart_TOL = restart_TOL, xtol = xtol, ftol = ftol, max_iter = max_iter)
     else
