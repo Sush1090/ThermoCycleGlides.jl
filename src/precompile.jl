@@ -29,7 +29,7 @@ using PrecompileTools: @setup_workload, @compile_workload
             sol_e = solve(_orc_econ_,N = 30,autodiff = false,ftol = 1e-8,xtol = 1e-8)
             sol = solve(_orc_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
         end
-                @compile_workload  begin
+        @compile_workload  begin
             fluid_model = cPR(["propane","butane"],idealmodel = ReidIdeal)
             z = [1.0,1.0]
             T_evap_out = 340
