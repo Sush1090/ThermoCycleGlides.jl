@@ -19,7 +19,7 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
     T_ph(p,h) = Clapeyron.PH.temperature(prob.fluid, p, h, prob.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
     s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
-    s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)
+    s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_comp_array, T_comp_array, label = "Compressor", color = :blue)
 
     T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
@@ -27,21 +27,21 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
     h_cond_array = collect(range(h_cond_out, h_comp_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
-    s_cond_array = s_ph.(p_cond, h_cond_array)
+    s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
     h_valve_in = h_cond_out
     h_valve_out = h_valve_in
     h_valve_array = collect(range(h_valve_in, h_valve_out, length = N))
     p_valve_array = collect(range(p_cond, p_evap, length = N))
     T_valve_array = T_ph.(p_valve_array, h_valve_array)
-    s_valve_array = s_ph.(p_valve_array, h_valve_array)
+    s_valve_array = s_ph.(p_valve_array, h_valve_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_valve_array, T_valve_array, label = "Expansion Valve", color = :green)
     h_evap_in = h_valve_out
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
-    s_evap_array = s_ph.(p_evap, h_evap_array)
+    s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
 
     # secondary fluids
@@ -68,7 +68,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     T_pump_array = T_ph.(p_cond, h_pump_array)
     s_pt(p,t) = entropy(prob.fluid, p, t, prob.z)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
-    s_pump_array = s_pt.(p_cond, T_pump_array)
+    s_pump_array = s_pt.(p_cond, T_pump_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_pump_array, T_pump_array, label = "Pump", color = :blue)
 
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
@@ -76,7 +76,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     h_evap_in = h_pump_out
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
-    s_evap_array = s_ph.(p_evap, h_evap_array)
+    s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
 
     h_exp_in = h_evap_out
@@ -84,7 +84,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     h_exp_array = collect(range(h_exp_in, h_exp_out, length = N))
     p_exp_array = collect(range(p_evap, p_cond, length = N))
     T_exp_array = T_ph.(p_exp_array, h_exp_array)
-    s_exp_array = s_ph.(p_exp_array, h_exp_array)
+    s_exp_array = s_ph.(p_exp_array, h_exp_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_exp_array, T_exp_array, label = "Expander", color = :orange)
 
     h_cond_in = h_exp_out
@@ -92,7 +92,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
     h_cond_array = collect(range(h_cond_in, h_cond_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
-    s_cond_array = s_ph.(p_cond, h_cond_array)
+    s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.fluid,prob.z)
     plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
     # secondary fluids
     T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length = N))
@@ -129,7 +129,7 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
     T_ph(p,h) = Clapeyron.PH.temperature(prob.hp.fluid, p, h, prob.hp.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
     s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
-    s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)
+    s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
     plot!(fig_phase, s_comp_array, T_comp_array, label = "Compressor", color = :blue)
 
     # Recuperator
@@ -137,14 +137,14 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
     h_recout_evap_out = h_recoup_evap_in + q_ihex
     h_recoup_evap_array = collect(range(h_recoup_evap_in, h_recout_evap_out, length = N))
     T_recoup_comp = T_ph.(p_evap, h_recoup_evap_array)
-    s_recoup_comp = s_ph_vapour.(p_evap, h_recoup_evap_array)
+    s_recoup_comp = s_ph_vapour.(p_evap, h_recoup_evap_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
     plot!(fig_phase, s_recoup_comp, T_recoup_comp, label = "iHEX", color = :black, linestyle = :dash)
 
     h_recoup_cond_in = h_cond_out
     h_recout_cond_out = h_recoup_cond_in - q_ihex
     h_recoup_cond_array = collect(range(h_recoup_cond_in, h_recout_cond_out, length = N))
     T_recoup_cond = T_ph.(p_cond, h_recoup_cond_array)
-    s_recoup_cond = s_ph_vapour.(p_cond, h_recoup_cond_array)
+    s_recoup_cond = s_ph_vapour.(p_cond, h_recoup_cond_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
     plot!(fig_phase, s_recoup_cond, T_recoup_cond, label = false, color = :black, linestyle = :dash)
 
     T_cond_out = Clapeyron.bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
@@ -152,21 +152,21 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
     h_cond_array = collect(range(h_cond_out, h_comp_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
-    s_cond_array = s_ph.(p_cond, h_cond_array)
+    s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
     plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
     h_valve_in = h_cond_out - q_ihex
     h_valve_out = h_valve_in
     h_valve_array = collect(range(h_valve_in, h_valve_out, length = N))
     p_valve_array = collect(range(p_cond, p_evap, length = N))
     T_valve_array = T_ph.(p_valve_array, h_valve_array)
-    s_valve_array = s_ph.(p_valve_array, h_valve_array)
+    s_valve_array = s_ph.(p_valve_array, h_valve_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
     plot!(fig_phase, s_valve_array, T_valve_array, label = "Expansion Valve", color = :green)
     h_evap_in = h_valve_out
     T_evap_out = Clapeyron.dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
-    s_evap_array = s_ph.(p_evap, h_evap_array)
+    s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
     plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
 
     # secondary fluids
@@ -196,7 +196,7 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     T_pump_array = T_ph.(p_cond, h_pump_array)
     s_pt(p,t) = entropy(prob.orc.fluid, p, t, prob.orc.z)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.orc.fluid, p, h, prob.orc.z)
-    s_pump_array = s_pt.(p_cond, T_pump_array)
+    s_pump_array = s_pt.(p_cond, T_pump_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
     plot!(fig_phase, s_pump_array, T_pump_array, label = "Pump", color = :blue)
 
     T_evap_out = dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1] + prob.orc.ΔT_sh
@@ -206,7 +206,7 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     h_exp_array = collect(range(h_exp_in, h_exp_out, length = N))
     p_exp_array = collect(range(p_evap, p_cond, length = N))
     T_exp_array = T_ph.(p_exp_array, h_exp_array)
-    s_exp_array = s_ph.(p_exp_array, h_exp_array)
+    s_exp_array = s_ph.(p_exp_array, h_exp_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
     plot!(fig_phase, s_exp_array, T_exp_array, label = "Expander", color = :orange)
     
     # Economizer
@@ -217,17 +217,17 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     h_evap_in = h_pump_out + q_ihex
     h_econ_cond_array = collect(range(h_exp_out, h_cond_in, length = N))
     T_econ_cond = T_ph.(p_cond, h_econ_cond_array)
-    s_econ_cond = s_ph.(p_cond, h_econ_cond_array)
+    s_econ_cond = s_ph.(p_cond, h_econ_cond_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
     plot!(fig_phase, s_econ_cond, T_econ_cond, label = "Economizer", color = :black, linestyle = :dash)
     h_econ_evap_array = collect(range(h_pump_out, h_evap_in, length = N))
     T_econ_evap = T_ph.(p_evap, h_econ_evap_array)
-    s_econ_evap = s_ph.(p_evap, h_econ_evap_array)
+    s_econ_evap = s_ph.(p_evap, h_econ_evap_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
     plot!(fig_phase, s_econ_evap, T_econ_evap, label = false, color = :black, linestyle = :dash)
 
 
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
-    s_evap_array = s_ph.(p_evap, h_evap_array)
+    s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
     plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
 
 
@@ -235,7 +235,7 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     h_cond_out = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_cond_out, prob.orc.z)
     h_cond_array = collect(range(h_cond_in, h_cond_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
-    s_cond_array = s_ph.(p_cond, h_cond_array)
+    s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
     plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
     # secondary fluids
     T_evap_sf_array = collect(range(prob.orc.T_evap_out, prob.orc.T_evap_in, length = N))
@@ -286,14 +286,14 @@ function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector; N = 
     T[end] = crit_pure(fluid)[1]
     s_l = similar(T)
     for i in eachindex(T)
-        s_l[i] = entropy(fluid,p_array[i],T[i],z,phase =:liquid)
+        s_l[i] = entropy(fluid,p_array[i],T[i],z,phase =:liquid)./molecular_weight(fluid,z)
     end
     s_g = similar(T)
     for i in eachindex(T)
-        s_g[i] = entropy(fluid, p_array[i], T[i],z,phase =:vapor)
+        s_g[i] = entropy(fluid, p_array[i], T[i],z,phase =:vapor)./molecular_weight(fluid,z)
     end
 
-    plot!(fig,s_l, T, label = false, ylabel = "Temperature (K)", xlabel = "Entropy (J/K)", title = "$(fluid.components[1])")
+    plot!(fig,s_l, T, label = false, ylabel = "Temperature (K)", xlabel = "Specific Entropy (J/K/kg)", title = "$(fluid.components[1])")
     plot!(fig, s_g, T, label = false)
     return fig
 end
@@ -313,13 +313,13 @@ function plot_phase_mix(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 10
   ThermoCycleGlides.fix_nan!(Tb)
   sb = similar(Tb);
   for i in eachindex(Tb)
-      sb[i] = entropy(fluid,p_array[i],Tb[i],z,phase =:liquid)
+      sb[i] = entropy(fluid,p_array[i],Tb[i],z,phase =:liquid)./molecular_weight(fluid,z)
   end
   sd = similar(Td)
   for i in eachindex(Td)
-    sd[i] = entropy(fluid, p_array[i], Td[i],z,phase =:vapor)
+    sd[i] = entropy(fluid, p_array[i], Td[i],z,phase =:vapor)./molecular_weight(fluid,z)
   end
-  plot!(fig,sb, Tb, label = false, ylabel = "Temperature (K)", xlabel = "Entropy (J/K)", title = "$(fluid.components)")
+  plot!(fig,sb, Tb, label = false, ylabel = "Temperature (K)", xlabel = "Specific Entropy (J/K/Kg)", title = "$(fluid.components)")
   plot!(fig, sd, Td, label = false)
 end
 

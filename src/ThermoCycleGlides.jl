@@ -7,6 +7,7 @@ using Plots, StaticArrays,Metaheuristics
 import LinearAlgebra: norm, rank
 import Base: show, length, copy, similar, promote_type
 
+import Clapeyron: molecular_weight
 
 
 abstract type ThermoCycleProblem end
