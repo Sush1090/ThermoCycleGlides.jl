@@ -97,6 +97,38 @@ function generate_box_solve_bounds(prob::ORC)
     return lb./101325, ub./101325 # normalize to 101325 Pa
 end
 
+"""
+Struct for solver and system paramters
+    N -  hex discrtization (incase of mixtures)
+    internal_pinch - to check if pinch point was met in two-phase
+"""
+mutable struct ThermoCycleParameters
+    N::Int
+    autodiff::Bool
+    internal_pinch::Bool
+    fd_order::Int
+    xtol::Real
+    ftol::Real
+    restart_TOL::Real
+    max_iters::Int
+end
+
+function ThermoCycleParameters(; 
+    N::Int = 20,
+    autodiff::Bool = true,
+    internal_pinch::Bool = true,
+    fd_order::Int = 2,
+    xtol::Real = 1e-6,
+    ftol::Real = 1e-6,
+    restart_TOL::Real = 1e-3,
+    max_iters::Int = 100
+)
+    N > 0 || error("N must be positive")
+    if !autodiff && fd_order < 2
+        error("If autodiff is false, fd_order must be ≥ 2 (higher-order finite differences required).")
+    end
+    return ThermoCycleParameters(N, autodiff, internal_pinch, fd_order, xtol, ftol, restart_TOL, max_iters)
+end
 
 function generate_box_solve_bounds(prob::ORCEconomizer)
     Tcrit,_,_ = crit_mix(prob.orc.fluid, prob.orc.z)
@@ -160,7 +192,24 @@ function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::
     end
 end
 
-export solve
+function solve(prob::ThermoCycleProblem,param::ThermoCycleParameters)
+    return solve(prob,autodiff = param.autodiff,fd_order=param.fd_order,restart_TOL = param.restart_TOL,N = param.N,xtol = param.xtol,
+    ftol = param.ftol,max_iter= param.max_iters)
+end
+
+export solve, ThermoCycleParameters
+
+function show(io::IO,params::ThermoCycleParameters)
+    println(io, "ThermoCycleParameters:")
+    println(io, "  N               = ", params.N)
+    println(io, "  autodiff        = ", params.autodiff)
+    println(io, "  internal_pinch  = ", params.internal_pinch)
+    println(io, "  fd_order        = ", params.fd_order)
+    println(io, "  xtol            = ", params.xtol)
+    println(io, "  ftol            = ", params.ftol)
+    println(io, "  restart_TOL     = ", params.restart_TOL)
+    println(io, "  max_iters       = ", params.max_iters)
+end
 
 
 
