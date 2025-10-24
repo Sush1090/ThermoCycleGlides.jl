@@ -52,4 +52,8 @@ function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm; autod
         end
 end
 
+function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm,params::ThermoCycleParameters)
+    return optimize(prob,algo,N = params.N,autodiff = params.autodiff,xtol = params.xtol,ftol = params.ftol,max_iter = params.max_iters,tol = params.restart_TOL)
+end
+
 export optimize
