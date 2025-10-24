@@ -1,3 +1,7 @@
+# function F(prob::ThermoCycleProblem,x::AbstractVector{T},N::Int,internal_pinch::Bool) where T<:Real
+#     return F(prob,x,N=N,internal_pinch = internal_pinch)
+# end
+
 
 function generate_initial_point(prob::HeatPump,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
     return [
@@ -87,6 +91,11 @@ function generate_box_solve_bounds(prob::ORC)
     if prob.T_evap_in > Tcrit
          psat_max = 0.95*pcrit
     end
+    if prob.T_evap_out > Tcrit
+        throw(error("For now we handel subcritical ORC. The outlet temperature of the evap : 
+        $(prob.T_evap) is higher than critical temperature of the fluid $Tcrit, this will not allow to meet the pinch points.
+        "))
+    end
     psat_min = dew_pressure(prob.fluid,prob.T_cond_in,prob.z)[1]
     psat_max = bubble_pressure(prob.fluid,prob.T_evap_in - prob.ΔT_sh,prob.z)[1] #pcrit*0.9#dew_pressure(prob.fluid,prob.T_evap_in,prob.z)[1]
     ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
@@ -129,6 +138,14 @@ function ThermoCycleParameters(;
     end
     return ThermoCycleParameters(N, autodiff, internal_pinch, fd_order, xtol, ftol, restart_TOL, max_iters)
 end
+
+# function check(prob::ThermoCycleProblem,param::ThermoCycleParameters)
+#     if param.internal_pinch == true && length(prob.z) == 1
+#         param.internal_pinch = false 
+#     end
+# end
+
+
 
 function generate_box_solve_bounds(prob::ORCEconomizer)
     Tcrit,_,_ = crit_mix(prob.orc.fluid, prob.orc.z)
@@ -175,7 +192,6 @@ function solve_fd(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector
     end
     return sol
 end
-
 
 
 """
