@@ -7,7 +7,14 @@ include("fluids.jl")
 # @testset "ThermoCycleGlides.jl" begin
 #     # Write your tests here.
 # end
-
+solverparams_ad = ThermoCycleParameters(
+    autodiff = true,
+    xtol = 1e-8,
+    ftol = 1e-8,
+    restart_TOL = 1e-4,
+    max_iters = 1000,
+    N = 30
+)
 
 @testset "Isentopic Compression - Single Component" begin
 
@@ -57,7 +64,7 @@ end
     z = [0.6157894736842106, 9.384210526315789]
     ΔT_sh = 11.473684210526315 
     _orc_ = ORC(fluid=fluid, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-    sol = solve(_orc_,N = 30,ftol = 1e-8,xtol = 1e-8)
+    sol = solve(_orc_,solverparams_ad)
     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
     @test sol.soltype == :subcritical
 end
@@ -71,7 +78,7 @@ end
         T_evap_out = 310
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol = solve(_orc_,N = 30,ftol = 1e-8,xtol = 1e-8)
+        sol = solve(_orc_,solverparams_ad)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
         @test sol.soltype == :subcritical
     end
@@ -98,7 +105,7 @@ end
         T_evap_out = 310
         ΔT_sh = 5.0 
         _orc_ = ORC(fluid=fluid_model, z=z, T_evap_in=330, T_evap_out=T_evap_out, T_cond_in=270, T_cond_out=280, η_pump=0.75, η_expander=0.75, pp_evap=3, pp_cond=3, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
-        sol = solve(_orc_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
+        sol = solve(_orc_,solverparams_ad)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
         @test sol.soltype == :subcritical
     end
@@ -158,7 +165,7 @@ end
         ΔT_sh = 5.0 
         hp_ = HeatPump(fluid=fluid_model, z=z, T_evap_in=310, T_evap_out=T_evap_out, T_cond_in=340, T_cond_out=355, η_comp=0.75, pp_evap=2, pp_cond=2, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
         ϵ = 0.4
-        sol_hp = solve(hp_,N = 30,autodiff = true)
+        sol_hp = solve(hp_,solverparams_ad)
         _hp_ = HeatPumpRecuperator(hp_,ϵ)
         sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
         @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
