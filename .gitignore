@@ -1,1 +1,12 @@
 /Manifest*.toml
+simulationtest/cases.jl
+simulationtest/save.jl
+simulationtest/simulate.jl
+simulationtest/thermo.jl
+simulationtest/utils.jl
+pentane_basic.png
+runtestcode.jl
+solutionstate.jl
+pentane.png
+testopt.jl
+test.jl
