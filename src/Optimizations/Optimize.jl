@@ -38,9 +38,9 @@ function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm; autod
         end
         if algo.options.parallel_evaluation == true
             function obj_parallel(x)
-                fitness = zeros(size(X,1))
+                fitness = zeros(size(x,1))
                 Threads.@threads for i in eachindex(x)
-                    fitness[i] = obj(x[i])
+                    fitness[i] = obj(x[i,:])
                 end
                 return fitness
             end
@@ -52,7 +52,7 @@ function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm; autod
 
         if algo.options.parallel_evaluation == false
             result = Metaheuristics.optimize(obj,bounds,algo)
-                        soltemp.ΔT_sc = result.best_sol.x[2]
+            soltemp.ΔT_sc = result.best_sol.x[2]
             soltemp.ΔT_sh = result.best_sol.x[1]
             return result,soltemp
         end
