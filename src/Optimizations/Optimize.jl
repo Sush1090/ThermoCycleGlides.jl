@@ -21,8 +21,14 @@ function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm; autod
                     return 0.0
                 else
                     if prob isa HeatPump || prob isa HeatPumpRecuperator
+                        if sol.x[1] > sol.x[2]
+                            return 0.0
+                        end
                         return COP(prob_,sol)
                     elseif prob isa ORC || prob isa ORCEconomizer
+                        if sol.x[1] < sol.x[2]
+                            return 0.0
+                        end
                         return η(prob_,sol)
                     end
                 end
