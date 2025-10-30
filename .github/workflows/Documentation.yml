@@ -27,8 +27,8 @@ jobs:
       - name: Install dependencies
         shell: julia --color=yes --project=docs {0}
         run: |
-            julia --project=docs/ -e 
-            'using Pkg; 
+            using Pkg; 
+            @show pwd()
             Pkg.develop(PackageSpec(path=pwd())); 
             Pkg.instantiate()
       - name: Build and deploy
