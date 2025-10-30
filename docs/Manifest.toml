@@ -1379,9 +1379,9 @@ version = "1.11.0"
 
 [[deps.ThermoCycleGlides]]
 deps = ["Clapeyron", "CommonSolve", "FiniteDifferences", "ForwardDiff", "Interpolations", "LinearAlgebra", "Metaheuristics", "Plots", "Polynomials", "PrecompileTools", "Preferences", "Roots", "StaticArrays"]
-git-tree-sha1 = "4069051b5a4743801f71b6b4a13035b5ddee2b95"
+path = "C:\\Users\\sush9\\.julia\\dev\\ThermoCycleGlides.jl"
 uuid = "58ad84e6-b92d-4139-8d7e-462257ec6cf0"
-version = "0.2.5"
+version = "0.2.6"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
