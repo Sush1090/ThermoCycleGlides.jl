@@ -27,10 +27,11 @@ jobs:
       - name: Install dependencies
         shell: julia --color=yes --project=docs {0}
         run: |
-            using Pkg; 
-            @show pwd()
-            Pkg.develop(PackageSpec(path=pwd())); 
-            Pkg.instantiate()
+          julia --project=docs/ -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+          julia --project=docs/ docs/make.jl
       - name: Build and deploy
         run: julia --color=yes --project=docs --code-coverage=user docs/make.jl
         env:
