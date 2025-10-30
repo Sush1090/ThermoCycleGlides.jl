@@ -39,7 +39,7 @@ function optimize(prob::ThermoCycleProblem,algo::Metaheuristics.Algorithm; autod
         if algo.options.parallel_evaluation == true
             function obj_parallel(x)
                 fitness = zeros(size(x,1))
-                Threads.@threads for i in eachindex(x)
+                Threads.@threads for i in 1:size(x,1)
                     fitness[i] = obj(x[i,:])
                 end
                 return fitness
