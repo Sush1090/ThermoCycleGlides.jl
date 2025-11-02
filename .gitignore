@@ -1,4 +1,5 @@
 /Manifest*.toml
+docs/Manifest*.toml
 simulationtest/cases.jl
 simulationtest/save.jl
 simulationtest/simulate.jl
