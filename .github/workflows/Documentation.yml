@@ -30,7 +30,6 @@ jobs:
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
-            Pkg.instantiate(; project="docs")
       - name: Build and deploy
         run: julia --color=yes --project=docs --code-coverage=user docs/make.jl
         env:
