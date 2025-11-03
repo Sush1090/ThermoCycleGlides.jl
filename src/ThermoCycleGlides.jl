@@ -1,7 +1,7 @@
 module ThermoCycleGlides
 
 using Clapeyron, Polynomials, Interpolations, FiniteDifferences
-using ForwardDiff, CommonSolve, LinearAlgebra
+using ForwardDiff, LinearAlgebra
 using Plots, StaticArrays,Metaheuristics
 
 import LinearAlgebra: norm, rank
