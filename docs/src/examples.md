@@ -3,9 +3,9 @@
 Here examples are shown on how to construct the system with parameters and how to solve it.
 
 ## Heat Pump
-The goal of a heat pump is to heat up the secondary fluid of the condensor with some input of energy. See [Heat pump and Refrigeration cycle](https://en.wikipedia.org/wiki/Heat_pump_and_refrigeration_cycle).
+The goal of a heat pump is to heat up the secondary fluid of the condenser with some input of energy. See [Heat pump and Refrigeration cycle](https://en.wikipedia.org/wiki/Heat_pump_and_refrigeration_cycle).
 
-To construct the system do the following:
+To construct the system, do the following:
 ```julia
 julia> using Clapeyron, ThermoCycleGlides
 
@@ -25,10 +25,10 @@ SolutionState{Float64, Int64}([0.12829257763187535, 1.4551588056895837], 16, 7, 
 julia> COP(hp,sol_hp)
 -3.735868783526992
 ```
-*Note:* `COP` is [Coeffecient of Performance](https://en.wikipedia.org/wiki/Coefficient_of_performance) of the Heat Pump, it is negetive as we see change of enthalpy of the working fluid which is negetive in the condensor.
+*Note:* `COP` is [Coefficient of Performance](https://en.wikipedia.org/wiki/Coefficient_of_performance) of the Heat Pump, it is negative as we see change of enthalpy of the working fluid which is negative in the condenser.
 
 
-To plot do the following;
+To plot do the following:
 
 ```julia
 plot_cycle(hp,sol_hp,N=300)
@@ -67,7 +67,7 @@ julia> η(orc,sol)
 -0.08885630488485266
 ```
 
-*Note:* Here also the efficiency is negative as there is enthalpy drop of the working fluid in the expander while there is an enthalpy gain in the evaporator. 
+*Note:* Here, the efficiency is also negative as there is enthalpy drop of the working fluid in the expander while there is an enthalpy gain in the evaporator. 
 
 To plot the ORC cycle: 
 

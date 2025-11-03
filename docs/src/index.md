@@ -22,12 +22,12 @@ There are 4 systems provided:
 
 The implemented version of these systems consist of the following components:
     
-1. Compressor : Modeled with isentropic efficiency   
-2. Expander : Modeled with isentropic efficiency
-3. Value : Modeled as isenthalpic process
+1. Compressor : Modelling with isentropic efficiency   
+2. Expander : Modelling with isentropic efficiency
+3. Valve : Modeled as isenthalpic process
 4. Evaporator : Volumes of equal change in enthalpy.
-5. Condensor : Volumes of equal change in enthalpy.
-6. Heat Exchangers (no phase change) : using $\epsilon$ as effectivness of heat exchanger. 
+5. Condenser : Volumes of equal change in enthalpy.
+6. Heat Exchangers (no phase change) : using $\epsilon$ as effectiveness of heat exchanger. 
 
 
 
