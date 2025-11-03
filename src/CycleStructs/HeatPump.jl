@@ -1,4 +1,21 @@
+"""
+    HeatPump{T<:Real} <: ThermoCycleProblem
 
+A mutable structure representing a vapour-compression heat pump thermodynamic problem.
+
+# Fields
+- `fluid::EoSModel`: The equation of state (EoS) model defining the working fluid thermodynamic properties.
+- `z::AbstractVector{T}`: The composition vector of the working fluid (for mixtures; typically `[1.0]` for pure fluids).
+- `T_evap_in::T`: Inlet temperature to the evaporator [K].
+- `T_evap_out::T`: Outlet temperature from the evaporator [K].
+- `ΔT_sh::T`: Degree of superheating at the evaporator outlet [K].
+- `T_cond_in::T`: Inlet temperature to the condenser [K].
+- `T_cond_out::T`: Outlet temperature from the condenser [K].
+- `ΔT_sc::T`: Degree of subcooling at the condenser outlet [K].
+- `η_comp::T`: Isentropic efficiency of the compressor [-].
+- `pp_evap::T`: Pinch point temperature difference for evaporator [K].
+- `pp_cond::T`: Pinch point temperature difference for condensor [K].
+"""
 mutable struct HeatPump{T<:Real} <: ThermoCycleProblem
     fluid::EoSModel
     z::AbstractVector{T}
@@ -77,7 +94,15 @@ function COP(prob::HeatPump,sol::AbstractVector{T}) where {T<:Real}
     return  (h_cond_out - h_comp_out)/(h_comp_out - h_comp_in) 
 end
 
+"""
+    HeatPumpRecuperator{T<:Real} <: ThermoCycleProblem
 
+A mutable structure representing a heat pump cycle with an internal recuperator (economiser or heat exchanger) between the discharge and suction sides.
+
+# Fields
+- `hp::HeatPump{T}`: The base heat pump configuration, containing fluid properties and cycle parameters.
+- `ϵ::T`: Effectiveness of the recuperator (dimensionless, typically between 0 and 1).
+"""
 mutable struct HeatPumpRecuperator{T<:Real} <:ThermoCycleProblem
     hp::HeatPump{T}
     ϵ::T
@@ -108,7 +133,9 @@ end
 
 export HeatPump, HeatPumpRecuperator, COP, show_parameters
 
-
+"""
+`F(prob::HeatPump, x::AbstractVector{T}; N::Int)` function call to `HeatPump`
+"""
 function F(prob::HeatPump, x::AbstractVector{T}; N::Int) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
 
@@ -274,6 +301,9 @@ function F_pure(prob::HeatPumpRecuperator,x::AbstractVector{T}) where {T<:Real}
     return [ΔT_cond,ΔT_evap]
 end
 
+"""
+`F(prob::HeatPumpRecuperator, x::AbstractVector{T}; N::Int)` function call to `HeatPump`
+"""
 function F(prob::HeatPumpRecuperator,x::AbstractVector{T};N::Int64) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
     if length(prob.hp.fluid.components) == 1
