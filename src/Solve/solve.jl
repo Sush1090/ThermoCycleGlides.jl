@@ -2,26 +2,40 @@
 #     return F(prob,x,N=N,internal_pinch = internal_pinch)
 # end
 
-
+"""
+`generate_initial_point(prob::HeatPump,lb::AbstractVector{T},ub::AbstractVector{T})` 
+Generates initial point for solving the system.
+"""
 function generate_initial_point(prob::HeatPump,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
     return [
         minimum(lb), maximum(ub)
     ]    
 end
 
+"""
+`generate_initial_point(prob::ORC,lb::AbstractVector{T},ub::AbstractVector{T})` 
+Generates initial point for solving the system.
+"""
 function generate_initial_point(prob::ORC,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
     return [
         maximum(ub), minimum(lb)
     ]    
 end
 
+"""
+`generate_initial_point(prob::ORCEconomizer,lb::AbstractVector{T},ub::AbstractVector{T})` 
+Generates initial point for solving the system.
+"""
 function generate_initial_point(prob::ORCEconomizer,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
     return [
         maximum(ub), minimum(lb)
     ]    
 end
 
-
+"""
+`generate_initial_point(prob::HeatPumpRecuperator,lb::AbstractVector{T},ub::AbstractVector{T})` 
+Generates initial point for solving the system.
+"""
 function generate_initial_point(prob::HeatPumpRecuperator,lb::AbstractVector{T},ub::AbstractVector{T}) where T<: Real
     return [
         minimum(lb), maximum(ub)
@@ -58,33 +72,18 @@ function generate_box_solve_bounds(prob::HeatPump)
     return lb./101325, ub./101325 # normalize to 101325 Pa
 end
 
+"""
+`generate_box_solve_bounds(prob::HeatPumpRecuperator) -> lb, ub`
+Generates lower and upper bounds for the heat pump problem based on its parameters.
+"""
 function generate_box_solve_bounds(prob::HeatPumpRecuperator)
     return generate_box_solve_bounds(prob.hp)
-    # Tcrit,_,_ = crit_mix(prob.hp.fluid, prob.hp.z)
-    # lb = zeros(eltype(prob.hp.z), 2)
-    # ub = zeros(eltype(prob.hp.z), 2)
-    # if prob.hp.T_cond_out > Tcrit
-    #     psat_max = 0.95*pcrit
-    # else
-    #     psat_max = bubble_pressure(prob.hp.fluid,prob.hp.T_cond_out + prob.hp.pp_cond + prob.hp.ΔT_sc,prob.hp.z)[1]
-    #     if !isfinite(psat_max)
-    #         psat_max = 0.95*pcrit 
-    #     end 
-    # end
-    # psat_min = dew_pressure(prob.hp.fluid,prob.hp.T_evap_out - prob.hp.pp_evap - prob.hp.ΔT_sh,prob.hp.z)[1]
-    # ub[1] = psat_max
-    # lb[1] = psat_min
-
-    # ub[2] = psat_max
-    # lb[2] = psat_min
-    # if !isfinite(psat_max)
-    #     throw(error("The upper bound on pressure is not finite. Check cycle parameters. Possible error on bubble_pressure calculation."))
-    # end
-
-
-    # return lb./101325, ub./101325 # normalize to 101325 Pa
 end
 
+"""
+`generate_box_solve_bounds(prob::ORC) -> lb, ub`
+Generates lower and upper bounds for the heat pump problem based on its parameters.
+"""
 function generate_box_solve_bounds(prob::ORC)
     Tcrit,pcrit,_ = crit_mix(prob.fluid, prob.z)
     lb = zeros(eltype(prob.z), 2)
@@ -117,9 +116,25 @@ function generate_box_solve_bounds(prob::ORC)
 end
 
 """
-Struct for solver and system paramters
-    N -  hex discrtization (incase of mixtures)
-    internal_pinch - to check if pinch point was met in two-phase
+`generate_box_solve_bounds(prob::ORCEconomizer) -> lb, ub`
+Generates lower and upper bounds for the heat pump problem based on its parameters.
+"""
+function generate_box_solve_bounds(prob::ORCEconomizer)
+    return generate_box_solve_bounds(prob.orc)
+end
+
+
+"""
+`ThermoCycleParameters` -  A struct to hold the solver parameters of the nonlinear solver.
+
+- `N::Int`: Heat Exchanger discretization.
+- `max_iters::Int`: Maximum number of iterations
+- `autodiff::Bool`: A flag indicating whether automatic differentiation was used.
+- `fd_order::Int`: The order of finite difference used if autodiff is false.
+- `xtol::Real`: convergece criteria on `x`.
+- `ftol::Real`: convergece criteria on `f`.
+- `restart_TOL::Real`: Restrat strategy with tolerace.
+- `internal_pinch::Bool` : Check for interal pinch for mixtures
 """
 mutable struct ThermoCycleParameters
     N::Int
@@ -149,31 +164,6 @@ function ThermoCycleParameters(;
     return ThermoCycleParameters(N, autodiff, internal_pinch, fd_order, xtol, ftol, restart_TOL, max_iters)
 end
 
-# function check(prob::ThermoCycleProblem,param::ThermoCycleParameters)
-#     if param.internal_pinch == true && length(prob.z) == 1
-#         param.internal_pinch = false 
-#     end
-# end
-
-
-
-function generate_box_solve_bounds(prob::ORCEconomizer)
-    return generate_box_solve_bounds(prob.orc)
-    # Tcrit,_,_ = crit_mix(prob.orc.fluid, prob.orc.z)
-    # lb = zeros(eltype(prob.orc.z), 2)
-    # ub = zeros(eltype(prob.orc.z), 2)
-    # if prob.orc.T_evap_in > Tcrit
-    #     throw(error("For now only subcritical ORC are supported. Inlet temperature to evaporator must be below critical temperature."))
-    # end
-    # psat_min = dew_pressure(prob.orc.fluid,prob.orc.T_cond_in,prob.orc.z)[1]
-    # psat_max = bubble_pressure(prob.orc.fluid,prob.orc.T_evap_in,prob.orc.z)[1] #pcrit*0.9#dew_pressure(prob.fluid,prob.T_evap_in,prob.z)[1]
-    # ub[1] = psat_max#dew_pressure(prob.fluid,prob.T_evap_in - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
-    # lb[1] = psat_min#bubble_pressure(prob.fluid,prob.T_evap_out - prob.pp_evap - prob.ΔT_sh,prob.z)[1] # evaporator pressure
-    # ub[2] = psat_max
-    # lb[2] = psat_min 
-
-    # return lb./101325, ub./101325 # normalize to 101325 Pa
-end
 
 function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
@@ -219,6 +209,11 @@ function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::
     end
 end
 
+"""
+    Solves for pressure values in HP and ORC cycles for the given glide and problem parameters. 
+    Define those problems in the respective structs. 
+    For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
+"""
 function solve(prob::ThermoCycleProblem,param::ThermoCycleParameters)
     return solve(prob,autodiff = param.autodiff,fd_order=param.fd_order,restart_TOL = param.restart_TOL,N = param.N,xtol = param.xtol,
     ftol = param.ftol,max_iter= param.max_iters)
