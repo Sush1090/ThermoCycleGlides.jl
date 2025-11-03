@@ -109,4 +109,4 @@ plot_cycle(hp_optimized,sol;N = 300)
 ```
 
 
-![orc_propane](../../Images/opt_hp.png)
+![orc_propane](Images/opt_hp.png)

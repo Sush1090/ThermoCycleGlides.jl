@@ -35,7 +35,7 @@ To plot do the following;
 plot_cycle(hp,sol_hp,N=300)
 ```
 
-![HP_cyclopentane](Images/hp_cyclopentane.png)
+![HP_cyclopentane](docs/src/Images/hp_cyclopentane.png)
 
 
 <!-- ORC Example:

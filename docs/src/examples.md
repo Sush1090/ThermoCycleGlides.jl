@@ -34,7 +34,7 @@ To plot do the following;
 plot_cycle(hp,sol_hp,N=300)
 ```
 
-![HP_cyclopentane](../../Images/hp_cyclopentane.png)
+![HP_cyclopentane](Images/hp_cyclopentane.png)
 
 
 ## Heat Pump with IHEX
@@ -75,7 +75,7 @@ To plot the ORC cycle:
 julia> plot_cycle(orc,sol,N=300)
 ```
 
-![orc_propane](../../Images/orc_propane.png)
+![orc_propane](Images/orc_propane.png)
 ## Organic Rankine Cycle with IHEX
 As for the heatpump we now construct the ORC with internal heat exchanger. 
 
