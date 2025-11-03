@@ -3,7 +3,10 @@
 
 Documentation of ThermoCycleGlides.jl.
 
-The goal of this package is to have the non-linear solver for Heat Pump and Organic Rankine Cycle systems. This is for steady-state applications.
+The goal of this package is to have the non-linear solver for Heat Pump and Organic Rankine Cycle systems. 
+
+This is for steady-state applications.
+
 The simplest version of these systems consist of:
     
 1. Compressor : Modeled with isentropic efficiency   
