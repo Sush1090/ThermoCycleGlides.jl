@@ -38,7 +38,7 @@ plot_cycle(hp,sol_hp,N=300)
 ![HP_cyclopentane](Images/hp_cyclopentane.png)
 
 
-ORC Example:
+<!-- ORC Example:
 
 ```julia
 julia> fluid = cPR(["propane"],idealmodel = ReidIdeal);
@@ -189,4 +189,4 @@ plot_cycle(hp_optimized,sol;N = 300)
 ```
 
 
-![orc_propane](Images/opt_hp.png)
+![orc_propane](Images/opt_hp.png) -->
