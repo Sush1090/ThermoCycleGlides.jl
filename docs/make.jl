@@ -6,8 +6,8 @@ modules = [ThermoCycleGlides],
 doctest = true,
 pages = [
     "Home" => "index.md",
-    # "Guide" => "Guide.md",
-    # "Cycles Modeling" => "Cycles.md",
+    "Examples" => "examples.md",
+    "Optimization" => "optimization.md",
     # "Cycle Optimization" => "Optimization.md",
     "References" => "reference.md"
 ]
