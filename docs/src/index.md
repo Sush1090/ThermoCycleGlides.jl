@@ -9,7 +9,7 @@ As of now the package is robust for subcritical cycle parameters. For thermodyna
 For details of modeling see:
 [Carnot batteries for heat and power coupling: Energy, Exergy, Economic and Environmental (4E) analysis - Laterre, Antoine](https://hdl.handle.net/2268/333259), which is describes modeling for pure fluids while this package also implements it for mixtures. 
 
-The nonlinear solver chosen is Newton-Raphson with box bounds which is inspired by the implementation in NLboxsolve.jl
+The nonlinear solver chosen is Newton-Raphson with box bounds which is inspired by the implementation in [NLboxsolve.jl](https://github.com/RJDennis/NLboxsolve.jl).
 
 This is for steady-state applications.
 
