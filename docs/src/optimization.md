@@ -1,4 +1,8 @@
+# Optimization
+
 Cycle optimization is integrated with Metaheuristics.jl. The goal of the inbuilt optimization is to find optimal super and sub cooling temperatures for a given cycle. 
+
+Here an example of `HeatPump` is shown.
 
 We set our `HeatPump`
 ```julia
@@ -103,10 +107,13 @@ result,hp_optimized = ThermoCycleGlides.optimize(hp,algo; autodiff = true,N = 20
 
 To plot the cycle we do as before but now the optimized cycle is already returned by the `optimize` function - `hp_optimized`
 
+**Note:** This is a metaheuristic method hence the converged answer for the user for this case can slighty be different based on number of function calls , time, solution etc ..
+
 ```julia
 sol = solve(hp_optimized,autodiff = true,N = 20,xtol = 1e-6,ftol = 1e-6,max_iter= 1000);
 plot_cycle(hp_optimized,sol;N = 300)
 ```
+
 
 
 ![orc_propane](Images/opt_hp.png)
