@@ -196,9 +196,9 @@ end
 
 
 """
-    Solves for pressure values in HP and ORC cycles for the given glide and problem parameters. 
-    Define those problems in the respective structs. 
-    For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
+Solves for pressure values in HP and ORC cycles for the given glide and problem parameters. 
+Define those problems in the respective structs. 
+For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
 """
 function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-6,ftol = 1e-6,max_iter= 1000)
     lb,ub = generate_box_solve_bounds(prob)
@@ -210,9 +210,9 @@ function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::
 end
 
 """
-    Solves for pressure values in HP and ORC cycles for the given glide and problem parameters. 
-    Define those problems in the respective structs. 
-    For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
+Solves for pressure values in HP and ORC cycles for the given glide and problem parameters. 
+Define those problems in the respective structs. 
+For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
 """
 function solve(prob::ThermoCycleProblem,param::ThermoCycleParameters)
     return solve(prob,autodiff = param.autodiff,fd_order=param.fd_order,restart_TOL = param.restart_TOL,N = param.N,xtol = param.xtol,
