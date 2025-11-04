@@ -1,6 +1,6 @@
 # Optimization
 
-Cycle optimization is integrated with Metaheuristics.jl. The goal of the inbuilt optimization is to find optimal super and sub cooling temperatures for a given cycle. 
+Cycle optimization is integrated with Metaheuristics.jl. The goal of the inbuilt optimization is to find optimal superheating and subcooling temperatures for a given cycle. 
 
 Here an example of `HeatPump` is shown.
 
@@ -12,7 +12,7 @@ fluid = cPR("propane",idealmodel = ReidIdeal)
 hp = HeatPump(fluid=fluid, z=[1.0], T_evap_in=310, T_evap_out=300.0, T_cond_in=325, T_cond_out=355, η_comp=0.75, pp_evap=5, pp_cond=5, ΔT_sc=5.0, ΔT_sh=5.0)
 ```
 
-We load the algorithm and its parameters from Metaheuristics.jl:
+We load the algorithm and its parameters from [Metaheuristics.jl](https://github.com/jmejia8/Metaheuristics.jl):
 ```julia
 options = Metaheuristics.Options(f_tol_rel = 1e-2, f_tol = 1e-2,f_calls_limit = 1000,parallel_evaluation = false,verbose = true)
 

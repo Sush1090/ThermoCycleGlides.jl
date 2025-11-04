@@ -1,6 +1,6 @@
 # Examples
 
-Here examples are shown on how to construct the system with parameters and how to solve it.
+These examples show how to construct the system with parameters and how to solve it.
 
 ## Heat Pump
 The goal of a heat pump is to heat up the secondary fluid of the condenser with some input of energy. See [Heat pump and Refrigeration cycle](https://en.wikipedia.org/wiki/Heat_pump_and_refrigeration_cycle).
@@ -39,7 +39,7 @@ plot_cycle(hp,sol_hp,N=300)
 
 ## Heat Pump with IHEX
 
-Now the same hp with an internal heat exchanger of effectiveness ($\epsilon$) of `0.7` can be constructed as follows:
+Now the same heatpump with an internal heat exchanger of effectiveness ($\epsilon$) of `0.7` can be constructed as follows:
 
 ```julia
 julia> hp_ihex = HeatPumpRecuperator(hp=hp,ϵ=0.7);
@@ -67,7 +67,7 @@ julia> η(orc,sol)
 -0.08885630488485266
 ```
 
-*Note:* Here, the efficiency is also negative as there is enthalpy drop of the working fluid in the expander while there is an enthalpy gain in the evaporator. 
+*Note:* Here, the efficiency is also negative as there is an enthalpy drop of the working fluid in the expander while there is an enthalpy gain in the evaporator. 
 
 To plot the ORC cycle: 
 
