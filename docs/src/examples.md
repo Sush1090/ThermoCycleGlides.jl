@@ -2,6 +2,8 @@
 
 These examples show how to construct the system with parameters and how to solve it.
 
+**Note** In all examples `z` denotes the number of moles, for mixtures ensure `length(z)` is same as the number of fluid components. 
+
 ## Heat Pump
 The goal of a heat pump is to heat up the secondary fluid of the condenser with some input of energy. See [Heat pump and Refrigeration cycle](https://en.wikipedia.org/wiki/Heat_pump_and_refrigeration_cycle).
 
@@ -43,6 +45,8 @@ plot_cycle(hp,sol_hp,N=300)
 
 Now the same heatpump with an internal heat exchanger of effectiveness ($\epsilon$) of `0.7` can be constructed as follows:
 
+![HP_recuperator_cyclopentane](Images/HP_recuperator_example.png)
+
 ```julia
 julia> hp_ihex = HeatPumpRecuperator(hp=hp,ϵ=0.7);
 
@@ -52,9 +56,13 @@ SolutionState{Float64, Int64}([0.12829257763131544, 1.4173574009406653], 8, 4, [
 julia> COP(hp_ihex,sol_ihex)
 -3.8122385181795906
 ```
+![HP_recupuerator_cycle](Images/hp_recuperaor_cycle_example.png)
+
 
 ## Organic Rankine Cycle
 An Organic Rankine Cycle aims to generate electricity from heating the working fluid, and passing it through an expander. See [Organic Rankine Cycle](https://en.wikipedia.org/wiki/Organic_Rankine_cycle) for more information.
+
+[orc_example](Images/ORC_example.png)
 
 ```julia
 julia> fluid = cPR(["propane"],idealmodel = ReidIdeal);
@@ -81,6 +89,8 @@ julia> plot_cycle(orc,sol,N=300)
 ## Organic Rankine Cycle with IHEX
 As for the heatpump we now construct the ORC with internal heat exchanger. 
 
+![ORC_economizer_example](Images/ORC_economizer_example.png)
+
 ```julia
 julia> orc_ihex = ORCEconomizer(orc=orc,ϵ=0.7);
 
@@ -90,7 +100,7 @@ SolutionState{Float64, Int64}([26.973845637899313, 8.391221086633655], 6, 3, [3.
 julia> η(orc_ihex,sol_ihex)
 -0.09082835333090268
 ```
-
+![ORC_economizer_example_cycle](Images/orc_economizer_cycle_example.png)
 
 # Plotting 
 To plot the cycle use the following API: 
