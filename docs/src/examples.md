@@ -104,7 +104,7 @@ julia> η(orc_ihex,sol_ihex)
 
 
 # Mixtures
-To use mixtures (multi-component) models for Clapeyron, construct the fluid with the desired components and ensure `z` to be the moles of each component and pass it to the cycle. 
+To use mixtures (multi-component) models for Clapeyron, construct the fluid with the desired components and ensure `z` to be the moles of each component and pass it to the cycle. In terms of solving, the difference with respect to pure fluids is that now there is a possibility of pinch point to be in two-phase. Hence we discretize the phase change zones.
 
 ```julia
 julia> using Clapeyron, ThermoCycleGlides
@@ -144,3 +144,10 @@ To plot the cycle use the following API:
 ```julia
 plot_cycle(prob::ThermoCycleProblem,sol::SolutionState,N=100)
 ```
+
+# Limitation
+
+1. Fluid models are limited to the ones provided by default in Clapeyron.jl
+2. For now the solver is stable for sub-critical parameters. So if incase the solver does converge please check if the parameters provided allow the solution to be subcritical. 
+3. For mixtures, it is recommended to use parameters sufficently below the critical point.  
+4. If for solving `autodiff = true` then for the first run there will be some compile time. Subsequent runs will be faster. 
