@@ -102,6 +102,42 @@ julia> η(orc_ihex,sol_ihex)
 ```
 ![ORC_economizer_example_cycle](Images/orc_economizer_cycle_example.png)
 
+
+# Mixtures
+To use mixtures (multi-component) models for Clapeyron, construct the fluid with the desired components and ensure `z` to be the moles of each component and pass it to the cycle. 
+
+```julia
+julia> using Clapeyron, ThermoCycleGlides
+
+julia> fluid = cPR(["propane","butane"],idealmodel = ReidIdeal);
+
+julia> η_comp = 0.75; pp_cond = 2; pp_evap = 2;
+
+julia>  T_evap_in = 273.15 + 10; T_evap_out = 273.15 + 0; T_cond_in = 273.15 + 50;  T_cond_out = 273.15+60;
+
+julia> ΔT_sc = 3; ΔT_sh = 10;
+
+julia>  hp = HeatPump(fluid=fluid,z=[1.0,1.0],T_evap_in=T_evap_in,T_evap_out = T_evap_out,T_cond_in = T_cond_in,T_cond_out=T_cond_out,η_comp=η_comp,pp_evap=pp_evap,pp_cond=pp_cond,ΔT_sc = ΔT_sc,ΔT_sh = ΔT_sh);
+
+julia> sol_hp = solve(hp,ThermoCycleParameters(autodiff=false))
+SolutionState{Float64, Int64}([1.5812457906456645, 11.770249683622305], 20, 4, [4.746425474877469e-11, -1.3073986337985843e-12], [1.0706541681245205, 1.0706541681245205], [14.486154094902748, 14.486154094902748], false, 2, 4.0127165888769095e-8, 4.748225742363393e-11, :subcritical)
+
+julia> show(sol_hp)
+Iterations: 4
+Function calls: 20
+Final residuals: [4.746425474877469e-11, -1.3073986337985843e-12]
+Final residual norm: 4.748225742363393e-11
+Final x: [1.5812457906456645, 11.770249683622305]
+Final lenx ||xn - xk||/||xk||: 4.0127165888769095e-8
+Final lenf ||f(xn)||: 4.748225742363393e-11
+Lower bounds: [1.0706541681245205, 1.0706541681245205]
+Upper bounds: [14.486154094902748, 14.486154094902748]
+Autodiff: false
+Finite difference order: 2
+Solution type: subcritical
+```
+
+
 # Plotting 
 To plot the cycle use the following API: 
 
