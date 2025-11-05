@@ -1,4 +1,8 @@
-Cycle optimization is integrated with Metaheuristics.jl. The goal of the inbuilt optimization is to find optimal super and sub cooling temperatures for a given cycle. 
+# Optimization
+
+Cycle optimization is integrated with Metaheuristics.jl. The goal of the inbuilt optimization is to find optimal superheating and subcooling temperatures for a given cycle. 
+
+Here an example of `HeatPump` is shown.
 
 We set our `HeatPump`
 ```julia
@@ -8,7 +12,7 @@ fluid = cPR("propane",idealmodel = ReidIdeal)
 hp = HeatPump(fluid=fluid, z=[1.0], T_evap_in=310, T_evap_out=300.0, T_cond_in=325, T_cond_out=355, η_comp=0.75, pp_evap=5, pp_cond=5, ΔT_sc=5.0, ΔT_sh=5.0)
 ```
 
-We load the algorithm and its parameters from Metaheuristics.jl:
+We load the algorithm and its parameters from [Metaheuristics.jl](https://github.com/jmejia8/Metaheuristics.jl):
 ```julia
 options = Metaheuristics.Options(f_tol_rel = 1e-2, f_tol = 1e-2,f_calls_limit = 1000,parallel_evaluation = false,verbose = true)
 
@@ -103,10 +107,17 @@ result,hp_optimized = ThermoCycleGlides.optimize(hp,algo; autodiff = true,N = 20
 
 To plot the cycle we do as before but now the optimized cycle is already returned by the `optimize` function - `hp_optimized`
 
+**Note:** This is a metaheuristic method hence the converged answer for the user for this case can slighty be different based on number of function calls , time, solution etc ..
+
 ```julia
 sol = solve(hp_optimized,autodiff = true,N = 20,xtol = 1e-6,ftol = 1e-6,max_iter= 1000);
 plot_cycle(hp_optimized,sol;N = 300)
 ```
 
+The `HeatPump` cycle before optimization had a COP of `-3.23`
 
-![orc_propane](Images/opt_hp.png)
+![hp_pre_opt](Images/preopt_cycle.png)
+
+
+After optimization of superheating and subcooling temperatures the COP is `-4.14`
+![hp_opt](Images/opt_hp.png)
