@@ -104,7 +104,7 @@ julia> η(orc_ihex,sol_ihex)
 
 
 # Mixtures
-To use mixtures (multi-component) models for Clapeyron, construct the fluid with the desired components and ensure `z` to be the moles of each component and pass it to the cycle. 
+To use mixtures (multi-component) models for Clapeyron, construct the fluid with the desired components and ensure `z` to be the moles of each component and pass it to the cycle. In terms of solving, the difference with respect to pure fluids is that now there is a possibility of pinch point to be in two-phase. Hence we discretize the phase change zones.
 
 ```julia
 julia> using Clapeyron, ThermoCycleGlides
