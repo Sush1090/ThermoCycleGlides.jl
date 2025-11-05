@@ -5,6 +5,8 @@ These examples show how to construct the system with parameters and how to solve
 ## Heat Pump
 The goal of a heat pump is to heat up the secondary fluid of the condenser with some input of energy. See [Heat pump and Refrigeration cycle](https://en.wikipedia.org/wiki/Heat_pump_and_refrigeration_cycle).
 
+![hp_example](Images/HP_example.png)
+
 To construct the system, do the following:
 ```julia
 julia> using Clapeyron, ThermoCycleGlides
