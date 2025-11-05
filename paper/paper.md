@@ -35,6 +35,9 @@ Modeling energy systems and
 # Statement of need
 [@Clapeyron-2022]
 
+One of the most common tecniquies to map performace... see antoine, zuldorf (hp), elias, 
+With the developments in julia on thermodynamic end (clapeyron)  which allow differentialbe code (AD) and robust mixture modeling one would like to take advantage of this in Julia. 
+
 # Citations
 
 
