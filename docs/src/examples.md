@@ -62,7 +62,7 @@ julia> COP(hp_ihex,sol_ihex)
 ## Organic Rankine Cycle
 An Organic Rankine Cycle aims to generate electricity from heating the working fluid, and passing it through an expander. See [Organic Rankine Cycle](https://en.wikipedia.org/wiki/Organic_Rankine_cycle) for more information.
 
-[orc_example](Images/ORC_example.png)
+![orc_example](Images/ORC_example.png)
 
 ```julia
 julia> fluid = cPR(["propane"],idealmodel = ReidIdeal);
