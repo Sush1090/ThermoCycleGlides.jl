@@ -144,3 +144,10 @@ To plot the cycle use the following API:
 ```julia
 plot_cycle(prob::ThermoCycleProblem,sol::SolutionState,N=100)
 ```
+
+# Limitation
+
+1. Fluid models are limited to the ones provided by default in Clapeyron.jl
+2. For now the solver is stable for sub-critical parameters. So if incase the solver does converge please check if the parameters provided allow the solution to be subcritical. 
+3. For mixtures, it is recommended to use parameters sufficently below the critical point.  
+4. If for solving `autodiff = true` then for the first run there will be some compile time. Subsequent runs will be faster. 
