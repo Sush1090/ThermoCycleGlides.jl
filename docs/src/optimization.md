@@ -114,6 +114,10 @@ sol = solve(hp_optimized,autodiff = true,N = 20,xtol = 1e-6,ftol = 1e-6,max_iter
 plot_cycle(hp_optimized,sol;N = 300)
 ```
 
+The `HeatPump` cycle before optimization had a COP of `-3.23`
+
+![hp_pre_opt](Images/preopt_cycle.png)
 
 
-![orc_propane](Images/opt_hp.png)
+After optimization of superheating and subcooling temperatures the COP is `-4.14`
+![hp_opt](Images/opt_hp.png)
