@@ -9,7 +9,6 @@ tags:
 authors:
   - name: Sushrut Deshpande
     orcid: 0009-0004-6960-7641
-    equal-contrib: true
     affiliation: "1, 2" # (Multiple affiliations must be quoted)
   - given-names: Bart Janssens
     orcid: 0000-0001-6164-7893
@@ -30,20 +29,14 @@ bibliography: paper.bib
 ---
 
 # Summary
-Modeling energy systems and 
+This package models and solves simple Heat pump (HP) and Organic Rankine Cycle (ORC) systems.  It solves the system given the secondary fluid temperature profiles and component parameters. The thermodynamic properties are computed using Clapeyron.jl[@Clapeyron-2022]. This allows modelling of this system with zeotropic mixtures, where the phase-change is non-isothermal unlike for pure fluids. The package implements a nonlinear pinch-point solver that determines the evaporator and condenser pressures corresponding to prescribed inlet and outlet temperatures, ensuring thermodynamic feasibility and consistent glide matching.  
+
 
 # Statement of need
-[@Clapeyron-2022]
+To map the performance of HP-ORC systems, pinch point analysis is a common technique (for example used in: [] [] []). A general tooling framework for quick mapping and optimzation is missing. This package aims to adderess this aspect.     
 
-One of the most common tecniquies to map performace... see antoine, zuldorf (hp), elias, 
-With the developments in julia on thermodynamic end (clapeyron)  which allow differentialbe code (AD) and robust mixture modeling one would like to take advantage of this in Julia. 
-
-# Citations
-
-
-# Figures
-
-
-# Acknowledgements
+# Example
+Should I put? Docs should be sufficient? Or just an image?
+ 
 
 # References
