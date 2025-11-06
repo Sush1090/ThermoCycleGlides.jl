@@ -33,7 +33,9 @@ This package models and solves simple Heat pump (HP) and Organic Rankine Cycle (
 
 
 # Statement of need
-To map the performance of HP-ORC systems, pinch point analysis is a common technique (for example used in: [] [] []). A general tooling framework for quick mapping and optimzation is missing. This package aims to adderess this aspect.     
+Designing and optimizing high-level HP-ORC systems requires handeling of temperature glides in the heat exchangers. This is generally done by  pinch-point analysis which finds the operating pressures in evaporators and condensors. This is a common technique that allows for mapping the performance of the cycles (for example used in: [] [] []). 
+
+    
 
 # Example
 Should I put? Docs should be sufficient? Or just an image?
