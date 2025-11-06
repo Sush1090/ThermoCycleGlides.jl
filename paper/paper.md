@@ -29,11 +29,11 @@ bibliography: paper.bib
 ---
 
 # Summary
-This package models and solves simple Heat pump (HP) and Organic Rankine Cycle (ORC) systems.  It solves the system given the secondary fluid temperature profiles and component parameters. The thermodynamic properties are computed using Clapeyron.jl[@Clapeyron-2022]. This allows modelling of this system with zeotropic mixtures, where the phase-change is non-isothermal unlike for pure fluids. The package implements a nonlinear pinch-point solver that determines the evaporator and condenser pressures corresponding to prescribed inlet and outlet temperatures, ensuring thermodynamic feasibility and consistent glide matching.  
+This package models and solves simple Heat pump (HP) and Organic Rankine Cycle (ORC) systems.  It solves the system given the secondary fluid temperature profiles and component parameters. The thermodynamic properties are computed using [@Clapeyron-2022]. This allows modelling of this system with zeotropic mixtures, where the phase-change is non-isothermal unlike for pure fluids. The package implements a nonlinear pinch-point solver that determines the evaporator and condenser pressures corresponding to prescribed inlet and outlet temperatures, ensuring thermodynamic feasibility and consistent glide matching.  
 
 
 # Statement of need
-Designing and optimizing high-level HP-ORC systems requires handeling of temperature glides in the heat exchangers. This is generally done by  pinch-point analysis which finds the operating pressures in evaporators and condensors. This is a common technique that allows for mapping the performance of the cycles (for example used in: [] [] []). 
+Designing and optimizing high-level HP-ORC systems requires handeling of temperature glides in the heat exchangers. This is generally done by  pinch-point analysis which finds the operating pressures in evaporators and condensors. It models the approach mention in [@Antoine-Laterre-2025], and extends it to mixtures as well.  This is a common technique that allows for mapping the performance of the cycles (for example used in: [zuldorl] [elias] [china?]).  
 
     
 
