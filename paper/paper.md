@@ -38,7 +38,9 @@ Thermodynamics is a vast discipline with applications that span scales—from qu
 Both applications operate as thermodynamic cycles, in which a working fluid circulates through a series of components—such as compressors, expanders, evaporators, and condensers—to accomplish a specific objective. In a heat pump, the goal is to achieve a temperature lift, transferring heat from a lower-temperature source to a higher-temperature sink by supplying external energy. Conversely, in a heat engine, the aim is to extract work by transferring energy from a high-temperature source to a low-temperature sink.
 
 
-Designing and optimizing high-level HP-ORC systems requires handeling of temperature glides in the heat exchangers. This is generally done by  pinch-point analysis which finds the operating pressures in evaporators and condensors. It models charaterized parameters mention in [@Antoine-Laterre-2025] and uses the heat exchanger model of equal heat transfer in each discretized volume [@ZUHLSDORF]. 
+Designing and optimising high-level heat pump (HP) and organic Rankine cycle (ORC) systems requires accurate handling of the secondary fluid temperature glides within the heat exchangers. These glides define how the external heat-source and heat-sink temperatures vary along the heat exchanger length and must be matched consistently with the working fluid’s thermodynamic behaviour. This is typically achieved through pinch-point analysis, which determines the evaporator and condenser operating pressures that satisfy thermal feasibility and ensure proper temperature matching.
+
+ThermoCycleGlides.jl provides a computational framework for solving this nonlinear pinch-point problem and determining the corresponding system conditions. It also includes a plotting framework for visualising the thermodynamic cycle and glide matching. The package follows the system characterisation outlined by [@Antoine-Laterre-2025] and employs a discretised heat exchanger model assuming equal heat transfer in each control volume, as described in [@ZUHLSDORF].
 
     
 # Example
