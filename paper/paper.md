@@ -45,6 +45,8 @@ ThermoCycleGlides.jl provides a computational framework for solving this nonline
     
 # Example
 
- 
+![hp_example](./images/HP_example.png) 
+
+![hp_example_sol](./images/hp_cyclopentane.png) 
 
 # References
