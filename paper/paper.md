@@ -33,12 +33,16 @@ This package models and solves simple Heat pump (HP) and Organic Rankine Cycle (
 
 
 # Statement of need
-Designing and optimizing high-level HP-ORC systems requires handeling of temperature glides in the heat exchangers. This is generally done by  pinch-point analysis which finds the operating pressures in evaporators and condensors. It models the approach mention in [@Antoine-Laterre-2025], and extends it to mixtures as well.  This is a common technique that allows for mapping the performance of the cycles (for example used in: [zuldorl] [elias] [china?]).  
+Thermodynamics is a vast discipline with applications that span scales—from quantum phenomena to large-scale energy systems. In practical energy engineering, thermodynamic principles underpin systems that rely on the behaviour of fluids to convert or transfer energy. Such systems are found in power generation and thermal management, where heat engines convert thermal energy into mechanical work, and heat pumps or refrigeration systems perform the inverse process, converting electrical energy into useful heating or cooling.
+
+Both applications operate as thermodynamic cycles, in which a working fluid circulates through a series of components—such as compressors, expanders, evaporators, and condensers—to accomplish a specific objective. In a heat pump, the goal is to achieve a temperature lift, transferring heat from a lower-temperature source to a higher-temperature sink by supplying external energy. Conversely, in a heat engine, the aim is to extract work by transferring energy from a high-temperature source to a low-temperature sink.
+
+
+Designing and optimizing high-level HP-ORC systems requires handeling of temperature glides in the heat exchangers. This is generally done by  pinch-point analysis which finds the operating pressures in evaporators and condensors. It models charaterized parameters mention in [@Antoine-Laterre-2025] and uses the heat exchanger model of equal heat transfer in each discretized volume [@ZUHLSDORF]. 
 
     
-
 # Example
-Should I put? Docs should be sufficient? Or just an image?
+
  
 
 # References
