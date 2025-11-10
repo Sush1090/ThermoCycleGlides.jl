@@ -31,7 +31,7 @@ mutable struct HeatPump{T<:Real} <: ThermoCycleProblem
 end
 
 function HeatPump(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in,T_cond_out,η_comp,pp_evap,pp_cond,ΔT_sh,ΔT_sc)
-    @assert fluid isa CubicEoSModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
+    @assert fluid isa CubicModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
     #default assertions
     @assert length(z) > 0 "Composition vector z must not be empty"
     @assert length(fluid.components) == length(z) "Composition vector z must match the number of components in the fluid model"
