@@ -6,7 +6,7 @@ Defines an Organic Rankine Cycle (ORC) problem with thermodynamic and design
 parameters specified in Kelvin and dimensionless efficiencies.
 
 # Fields
-- `fluid::EoSModel`: Equation of State (EoS) model representing the working fluid.
+- `fluid::CubicModel`: Equation of State (EoS) model representing the working fluid. For now it has to be Cubic EoS.
 - `z::AbstractVector{T}`: Mole fraction composition vector of the working fluid.
 - `T_evap_in::T`: Inlet temperature of the evaporator [K].
 - `T_evap_out::T`: Outlet temperature of the evaporator [K].
@@ -38,6 +38,8 @@ end
 
 function ORC(; fluid::EoSModel, z, T_evap_in, T_evap_out, T_cond_in, T_cond_out,
              η_pump, η_expander, pp_evap, pp_cond, ΔT_sh, ΔT_sc)
+
+    @assert fluid isa CubicEoSModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
 
     @assert length(z) > 0 "Composition vector z must not be empty"
     @assert length(fluid.components) == length(z) "Composition vector z must match number of fluid components"

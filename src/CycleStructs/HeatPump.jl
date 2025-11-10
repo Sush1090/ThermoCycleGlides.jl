@@ -4,7 +4,7 @@
 A mutable structure representing a vapour-compression heat pump thermodynamic problem.
 
 # Fields
-- `fluid::EoSModel`: The equation of state (EoS) model defining the working fluid thermodynamic properties.
+- `fluid::EoSModel`: The equation of state (EoS) model defining the working fluid thermodynamic properties. For now it has to be Cubic EoS.
 - `z::AbstractVector{T}`: The composition vector of the working fluid (for mixtures; typically `[1.0]` for pure fluids).
 - `T_evap_in::T`: Inlet temperature to the evaporator [K].
 - `T_evap_out::T`: Outlet temperature from the evaporator [K].
@@ -31,7 +31,7 @@ mutable struct HeatPump{T<:Real} <: ThermoCycleProblem
 end
 
 function HeatPump(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in,T_cond_out,η_comp,pp_evap,pp_cond,ΔT_sh,ΔT_sc)
-
+    @assert fluid isa CubicEoSModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
     #default assertions
     @assert length(z) > 0 "Composition vector z must not be empty"
     @assert length(fluid.components) == length(z) "Composition vector z must match the number of components in the fluid model"
