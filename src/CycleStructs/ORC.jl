@@ -39,7 +39,7 @@ end
 function ORC(; fluid::EoSModel, z, T_evap_in, T_evap_out, T_cond_in, T_cond_out,
              η_pump, η_expander, pp_evap, pp_cond, ΔT_sh, ΔT_sc)
 
-    @assert fluid isa CubicEoSModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
+    @assert fluid isa CubicModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
 
     @assert length(z) > 0 "Composition vector z must not be empty"
     @assert length(fluid.components) == length(z) "Composition vector z must match number of fluid components"
