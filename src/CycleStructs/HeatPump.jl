@@ -428,15 +428,6 @@ function COP(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState)
 end
 
 
-# function check_hp_parameters(prob::HeatPump)
-#     if prob.ΔT_sc > prob.T_cond_out - prob.T_cond_in
-#         @warn "Subcooling temperature is more than the temperature difference of the sf in the condenser. Change ΔT_sc or T_cond_in/out. Solver might not converge."
-#     end
-#     Tcrit,_,_ = crit_mix(prob.fluid, prob.z)
-#     if 
-# end
-
-
 function F_super(prob::HeatPump,x::AbstractVector,pcrit::Real,Tcrit::Real;N::Int = 30)
     p_evap = x[1] * 101_325
     p_cond = pcrit*x[2]
@@ -528,4 +519,99 @@ function _F(prob::HeatPump, x::AbstractVector{T}) where {T<:Real}
     T_evap_sf_f(h) = prob.T_evap_in - (h_evap_out - h)*(prob.T_evap_in - prob.T_evap_out)/(h_evap_out - h_evap_in)
     ΔTpp_evap = minimum(T_evap_sf_f.(h_evap_array) .- T_evap_array) - prob.pp_evap
     return [ΔTpp_evap, ΔTpp_cond]  # avoids heap allocations
+end
+
+
+function get_states(prob::HeatPump,sol::SolutionState)
+    p_evap,p_cond = 101325.0 .* sol.x
+    T_evap_out = dew_temperature(prob.fluid,p_evap,prob.z)[1] + prob.ΔT_sh
+    h_evap_out = enthalpy(prob.fluid,p_evap,T_evap_out,prob.z)
+
+    h_evap_out_spec = enthalpy(prob.fluid,p_evap,T_evap_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_evap_out_spec = entropy(prob.fluid,p_evap,T_evap_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap,p_cond,prob.η_comp,h_evap_out,prob.z,prob.fluid)
+    T_comp_out = Clapeyron.PH.temperature(prob.fluid,p_cond,h_comp_out,prob.z)
+    s_comp_out_spec = entropy(prob.fluid,p_cond,T_comp_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    h_comp_out_spec = enthalpy(prob.fluid,p_cond,T_comp_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    T_cond_out = bubble_temperature(prob.fluid,p_cond,prob.z)[1] - prob.ΔT_sc
+    h_cond_out = enthalpy(prob.fluid,p_cond,T_cond_out,prob.z)
+    h_cond_out_spec = enthalpy(prob.fluid,p_cond,T_cond_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_cond_out_spec = entropy(prob.fluid,p_cond,T_cond_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_valve_out = h_cond_out
+    T_valve_out = Clapeyron.PH.temperature(prob.fluid,p_cond,h_valve_out,prob.z)
+    h_valve_out_spec = h_cond_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_valve_out_spec = Clapeyron.PH.entropy(prob.fluid,p_evap,h_valve_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    return Dict(
+        :p_evap => p_evap,
+        :T_evap_out => T_evap_out,
+        :h_evap_out => h_evap_out_spec,
+        :s_evap_out => s_evap_out_spec,
+        :T_comp_out => T_comp_out,
+        :h_comp_out => h_comp_out_spec,
+        :s_comp_out => s_comp_out_spec,
+        :p_cond => p_cond,
+        :T_cond_out => T_cond_out,
+        :h_cond_out => h_cond_out_spec,
+        :s_cond_out => s_cond_out_spec,
+        :T_valve_out => T_valve_out,
+        :h_valve_out => h_valve_out_spec,
+        :s_valve_out => s_valve_out_spec
+    )
+end
+
+
+function get_states(prob::HeatPumpRecuperator,sol::SolutionState)
+    p_evap,p_cond = 101325.0 .* sol.x
+    T_evap_out = dew_temperature(prob.hp.fluid,p_evap,prob.hp.z)[1] + prob.hp.ΔT_sh
+    h_evap_out = enthalpy(prob.hp.fluid,p_evap,T_evap_out,prob.hp.z)
+    h_evap_out_spec = enthalpy(prob.hp.fluid,p_evap,T_evap_out,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    s_evap_out_spec = entropy(prob.hp.fluid,p_evap,T_evap_out,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+
+    q_ihex = ThermoCycleGlides.IHEX_Q(prob.hp.fluid,prob.ϵ,T_cond_out, p_cond, T_evap_out, p_evap, prob.hp.z)
+    h_recup_out_comp_end = h_evap_out + q_ihex
+    T_recup_out_comp_end = Clapeyron.PH.temperature(prob.hp.fluid,p_evap,h_recup_out_comp_end,prob.hp.z)
+    s_recup_out_comp_end_spec = entropy(prob.hp.fluid,p_evap,T_recup_out_comp_end,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    h_recup_out_comp_end_spec = h_recup_out_comp_end./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap,p_cond,prob.hp.η_comp,h_recup_out_comp_end,prob.hp.z,prob.hp.fluid)
+    T_comp_out = Clapeyron.PH.temperature(prob.hp.fluid,p_cond,h_comp_out,prob.hp.z)
+    s_comp_out_spec = entropy(prob.hp.fluid,p_cond,T_comp_out,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    h_comp_out_spec = h_comp_out./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+
+    T_cond_out = bubble_temperature(prob.hp.fluid,p_cond,prob.hp.z)[1] - prob.hp.ΔT_sc
+    h_cond_out = enthalpy(prob.hp.fluid,p_cond,T_cond_out,prob.hp.z)
+    h_cond_out_spec = enthalpy(prob.hp.fluid,p_cond,T_cond_out,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    s_cond_out_spec = entropy(prob.hp.fluid,p_cond,T_cond_out,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+
+    h_recup_out_valve_end = h_cond_out - q_ihex
+    T_recup_out_valve_end = Clapeyron.PH.temperature(prob.hp.fluid,p_cond,h_recup_out_valve_end,prob.hp.z)
+    h_recup_out_valve_end_spec = h_recup_out_valve_end./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    s_recup_out_valve_end_spec = entropy(prob.hp.fluid,p_cond,T_recup_out_valve_end,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+
+    h_valve_out = h_recup_out_valve_end
+    T_valve_out = Clapeyron.PH.temperature(prob.hp.fluid,p_evap,h_valve_out,prob.hp.z)
+    h_valve_out_spec = h_valve_out./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+    s_valve_out_spec = Clapeyron.PH.entropy(prob.hp.fluid,p_evap,h_valve_out,prob.hp.z)./Clapeyron.molecular_weight(prob.hp.fluid,prob.hp.z)
+
+    return Dict(
+        :p_evap => p_evap,
+        :T_evap_out => T_evap_out,
+        :h_evap_out => h_evap_out,
+        :T_comp_out => T_comp_out,
+        :h_comp_out => h_comp_out,
+        :p_cond => p_cond,
+        :T_cond_out => T_cond_out,
+        :h_cond_out => h_cond_out,
+        :T_valve_out => T_valve_out,
+        :h_valve_out => h_valve_out,
+        :h_recup_out_comp_end => h_recup_out_comp_end,
+        :h_recup_out_valve_end => h_recup_out_valve_end,
+        :T_recup_out_valve_end => T_recup_out_valve_end,
+        :h_recup_out_valve_end_spec => h_recup_out_valve_end_spec,
+        :s_recup_out_valve_end_spec => s_recup_out_valve_end_spec
+    )
+    
 end

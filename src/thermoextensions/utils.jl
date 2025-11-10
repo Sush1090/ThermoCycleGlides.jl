@@ -54,3 +54,44 @@ end
 function glide_match_coeff(prob::ThermoCycleGlides.ThermoCycleProblem,sol::SolutionState;N::Int = 20)
 
 end
+
+function get_states(prob::HeatPump,sol::SolutionState)
+    p_evap,p_cond = 101325.0 .* sol.x
+    T_evap_out = dew_temperature(prob.fluid,p_evap,prob.z)[1] + prob.ΔT_sh
+    h_evap_out = enthalpy(prob.fluid,p_evap,T_evap_out,prob.z)
+
+    h_evap_out_spec = enthalpy(prob.fluid,p_evap,T_evap_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_evap_out_spec = entropy(prob.fluid,p_evap,T_evap_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap,p_cond,prob.η_comp,h_evap_out,prob.z,prob.fluid)
+    T_comp_out = Clapeyron.PH.temperature(prob.fluid,p_cond,h_comp_out,prob.z)
+    s_comp_out_spec = entropy(prob.fluid,p_cond,T_comp_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    h_comp_out_spec = enthalpy(prob.fluid,p_cond,T_comp_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    T_cond_out = bubble_temperature(prob.fluid,p_cond,prob.z)[1] - prob.ΔT_sc
+    h_cond_out = enthalpy(prob.fluid,p_cond,T_cond_out,prob.z)
+    h_cond_out_spec = enthalpy(prob.fluid,p_cond,T_cond_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_cond_out_spec = entropy(prob.fluid,p_cond,T_cond_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_valve_out = h_cond_out
+    T_valve_out = Clapeyron.PH.temperature(prob.fluid,p_cond,h_valve_out,prob.z)
+    h_valve_out_spec = h_cond_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_valve_out_spec = Clapeyron.PH.entropy(prob.fluid,p_evap,h_valve_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    return Dict(
+        :p_evap => p_evap,
+        :T_evap_out => T_evap_out,
+        :h_evap_out => h_evap_out_spec,
+        :s_evap_out => s_evap_out_spec,
+        :T_comp_out => T_comp_out,
+        :h_comp_out => h_comp_out_spec,
+        :s_comp_out => s_comp_out_spec,
+        :p_cond => p_cond,
+        :T_cond_out => T_cond_out,
+        :h_cond_out => h_cond_out_spec,
+        :s_cond_out => s_cond_out_spec,
+        :T_valve_out => T_valve_out,
+        :h_valve_out => h_valve_out_spec,
+        :s_valve_out => s_valve_out_spec
+    )
+end
