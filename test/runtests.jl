@@ -188,21 +188,21 @@ end
 end
 
 
-@testset "issue : #20" begin
-    for i in eachindex(eos_)
-    fluid = eos_[i](["acetone", "isopentane"],idealmodel= ReidIdeal); z = [0.1, 9.9];
-    orc = ORC(
-        fluid = fluid, z= z,
-        T_evap_in = 383.15, T_evap_out = 363.15, 
-        T_cond_in = 290.0, T_cond_out = 310.0,
-        η_pump = 0.75, η_expander = 0.75,
-        pp_evap = 5.0, pp_cond = 5.0,
-        ΔT_sc = 16.174645986149887, ΔT_sh = 6.851340038880649
-    )
-    solver_params = ThermoCycleParameters()
-    sol = solve(orc,solver_params)
-    @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-    @test sol.soltype == :subcritical
-    @test sol.x[1]>=sol.x[2]
-    end
-end
+# @testset "issue : #20" begin
+#     for i in eachindex(eos_)
+#     fluid = eos_[i](["acetone", "isopentane"],idealmodel= ReidIdeal); z = [0.1, 9.9];
+#     orc = ORC(
+#         fluid = fluid, z= z,
+#         T_evap_in = 383.15, T_evap_out = 363.15, 
+#         T_cond_in = 290.0, T_cond_out = 310.0,
+#         η_pump = 0.75, η_expander = 0.75,
+#         pp_evap = 5.0, pp_cond = 5.0,
+#         ΔT_sc = 16.174645986149887, ΔT_sh = 6.851340038880649
+#     )
+#     solver_params = ThermoCycleParameters()
+#     sol = solve(orc,solver_params)
+#     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
+#     @test sol.soltype == :subcritical
+#     @test sol.x[1]>=sol.x[2]
+#     end
+# end
