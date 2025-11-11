@@ -439,3 +439,45 @@ function _F(prob::ORC, x::AbstractVector{T}) where {T<:Real}
     ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.pp_cond
     return [ΔT_evap,ΔT_cond]
 end
+
+function get_states(prob::ORC,sol::SolutionState)
+    p_evap,p_cond = sol.x .* 101325
+    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
+    h_cond_out_spec = h_cond_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_cond_out_spec = entropy(prob.fluid,p_cond,T_cond_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_cond_out, prob.z, prob.fluid)
+    T_pump_out = Clapeyron.PH.temperature(prob.fluid, p_evap, h_pump_out, prob.z)
+    h_pump_out_spec = h_pump_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_pump_out_spec = entropy(prob.fluid,p_evap,T_pump_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
+    h_evap_out_spec = h_evap_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_evap_out_spec = entropy(prob.fluid,p_evap,T_evap_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_evap_out, prob.z, prob.fluid)
+    T_exp_out = Clapeyron.PH.temperature(prob.fluid, p_cond, h_exp_out, prob.z)
+    h_exp_out_spec = h_exp_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_exp_out_spec = entropy(prob.fluid,p_cond,T_exp_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+
+    dict = Dict(
+        :p_evap => p_evap,
+        :p_cond => p_cond,
+        :T_cond_out => T_cond_out,
+        :h_cond_out => h_cond_out,
+        :h_cond_out => h_cond_out_spec,
+        :s_cond_out => s_cond_out_spec,
+        :T_pump_out => T_pump_out,
+        :h_pump_out => h_pump_out_spec,
+        :s_pump_out => s_pump_out_spec,
+        :T_evap_out => T_evap_out,
+        :h_evap_out => h_evap_out_spec,
+        :s_evap_out => s_evap_out_spec,
+        :T_exp_out => T_exp_out,
+        :h_exp_out => h_exp_out_spec,
+        :s_exp_out => s_exp_out_spec
+    )
+end
