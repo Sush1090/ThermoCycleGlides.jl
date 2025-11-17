@@ -150,15 +150,20 @@ function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
     if length(prob.fluid.components) == 1
         return F_pure(prob,x)
     end
+    
     p_evap,p_cond = x .* 101325 # convert to Pa
-    T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+
+    T_evap_out = Clapeyron.temperature(prob.fluid, flash_res1_evap) + prob.ΔT_sh
     # @show T_evap_out
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
 
     h_exp_in = h_evap_out;
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
     h_cond_in = h_exp_out
-    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    T_cond_out = Clapeyron.temperature(prob.fluid, flash_res0_cond) - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
     h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
     T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
@@ -320,8 +325,10 @@ function F(prob::ORCEconomizer,x::AbstractVector{T};N::Int64) where {T<:Real}
         return F_pure(prob,x)
     end
     p_evap,p_cond = x .* 101325 # convert to Pa
-    T_sat_evap = Clapeyron.dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1]
-    T_sat_cond = Clapeyron.bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1]
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+    T_sat_evap = Clapeyron.temperature(prob.orc.fluid, flash_res1_evap)
+    T_sat_cond = Clapeyron.temperature(prob.orc.fluid, flash_res0_cond)
     T_evap_out = T_sat_evap + prob.orc.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
     h_exp_in = h_evap_out;

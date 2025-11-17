@@ -146,8 +146,11 @@ function F(prob::HeatPump, x::AbstractVector{T}; N::Int) where {T<:Real}
     p_evap = x[1] * 101_325
     p_cond = x[2] * 101_325
 
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle)) 
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+    
     # evaporator outlet
-    T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    T_evap_out = Clapeyron.temperature(prob.fluid, flash_res1_evap) + prob.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
 
     # compressor
@@ -155,7 +158,7 @@ function F(prob::HeatPump, x::AbstractVector{T}; N::Int) where {T<:Real}
                                        h_evap_out, prob.z, prob.fluid)
 
     # condenser outlet
-    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    T_cond_out = Clapeyron.temperature(prob.fluid, flash_res0_cond) - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
 
     # ----------------------------------
@@ -310,8 +313,11 @@ function F(prob::HeatPumpRecuperator,x::AbstractVector{T};N::Int64) where {T<:Re
         return F_pure(prob,x)
     end    
     p_evap,p_cond = x .* 101325 # convert to Pa
-    T_sat_evap = dew_temperature(prob.hp.fluid,p_evap,prob.hp.z)[1]
-    T_sat_cond = bubble_temperature(prob.hp.fluid,p_cond,prob.hp.z)[1]
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle)) 
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+    
+    T_sat_evap = Clapeyron.temperature(prob.fluid, flash_res1_evap)
+    T_sat_cond = Clapeyron.temperature(prob.fluid, flash_res0_cond)
     T_evap_out = T_sat_evap + prob.hp.ΔT_sh
 
     T_cond_out = T_sat_cond - prob.hp.ΔT_sc
