@@ -380,6 +380,9 @@ end
         linestyle := :solid
         markercolor := :blue
         label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "Heat Pump Cycle on TS Diagram: $(prob.fluid.components)"
         (phasedata[:s_bubble], phasedata[:Tb])
     end
 
@@ -429,6 +432,9 @@ end
         linestyle := :dash
         linecolor := :red
         label := "Secondary Fluid Condenser"
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "Heat Pump Cycle on TS Diagram: $(prob.fluid.components)"
         (hpdata[:s_cond_array], hpdata[:T_cond_sf_array])
     end
 end
