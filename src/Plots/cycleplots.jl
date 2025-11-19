@@ -369,9 +369,6 @@ end
         linewidth := 2
         markercolor := :red
         label := false
-        ylabel := "Temperature (K)"
-        xlabel := "Specific Entropy (J/K/kg)"
-        title := "Heat Pump Cycle on TS Diagram: $(prob.fluid.components)"
         (phasedata[:s_dew], phasedata[:Td])
     end
     @series begin
@@ -388,7 +385,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Compressor"
+        label := false
         (hpdata[:s_comp_array], hpdata[:T_comp_array])
     end
     @series begin
@@ -396,7 +393,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Condenser"
+        label := false
         (hpdata[:s_cond_array], hpdata[:T_cond_array])
     end
     @series begin
@@ -404,7 +401,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Valve"
+        label := false
         (hpdata[:s_valve_array], hpdata[:T_valve_array])
     end
     @series begin
@@ -412,7 +409,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Evaporator"
+        label := false
         (hpdata[:s_evap_array], hpdata[:T_evap_array])
     end
     @series begin
@@ -429,6 +426,9 @@ end
         linestyle := :dash
         linecolor := :red
         label := "Secondary Fluid Condenser"
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "$(prob.fluid.components)"
         (hpdata[:s_cond_array], hpdata[:T_cond_sf_array])
     end
 end
@@ -444,9 +444,6 @@ end
         linewidth := 2
         markercolor := :red
         label := false
-        ylabel := "Temperature (K)"
-        xlabel := "Specific Entropy (J/K/kg)"
-        title := "ORC Cycle on TS Diagram: $(prob.fluid.components)"
         (phasedata[:s_dew], phasedata[:Td])
     end
     @series begin
@@ -463,7 +460,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Pump"
+        label := false
         (orcdata[:s_pump_array], orcdata[:T_pump_array])
     end
     @series begin
@@ -471,7 +468,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Evaporator"
+        label := false
         (orcdata[:s_evap_array], orcdata[:T_evap_array])
     end
     @series begin
@@ -479,7 +476,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Expander"
+        label := false
         (orcdata[:s_exp_array], orcdata[:T_exp_array])
     end
     @series begin
@@ -487,7 +484,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Condenser"
+        label := false
         (orcdata[:s_cond_array], orcdata[:T_cond_array])
     end
     @series begin
@@ -504,6 +501,9 @@ end
         linestyle := :dash
         linecolor := :red
         label := "Secondary Fluid Condenser"
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "ORC Cycle on TS Diagram: $(prob.fluid.components)"
         (orcdata[:s_cond_array], orcdata[:T_cond_sf_array])
     end
     
@@ -520,9 +520,6 @@ end
         linewidth := 2
         markercolor := :red
         label := false
-        ylabel := "Temperature (K)"
-        xlabel := "Specific Entropy (J/K/kg)"
-        title := "Heat Pump with Recuperator Cycle on TS Diagram: $(prob.hp.fluid.components)"
         (phasedata[:s_dew], phasedata[:Td])
     end
     @series begin
@@ -539,7 +536,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Compressor"
+        label := false
         (hpdata[:s_comp_array], hpdata[:T_comp_array])
     end
     @series begin
@@ -547,7 +544,7 @@ end
         linewidth := 2
         linestyle := :dot
         linecolor := :green
-        label := "Recuperator Compressor Side"
+        label := false
         (hpdata[:s_recoup_comp], hpdata[:T_recoup_comp])
     end
     @series begin
@@ -555,7 +552,7 @@ end
         linewidth := 2
         linestyle := :dot
         linecolor := :green
-        label := "Recuperator Condenser Side"
+        label := false
         (hpdata[:s_recoup_cond], hpdata[:T_recoup_cond])
     end
     @series begin
@@ -563,7 +560,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Condenser"
+        label := false
         (hpdata[:s_cond_array], hpdata[:T_cond_array])
     end
     @series begin
@@ -571,7 +568,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Valve"
+        label := false
         (hpdata[:s_valve_array], hpdata[:T_valve_array])
     end
     @series begin 
@@ -596,7 +593,10 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Evaporator"
+        label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "$(prob.hp.fluid.components)"
         (hpdata[:s_evap_array], hpdata[:T_evap_array])
     end
 end
@@ -614,9 +614,6 @@ end
         linewidth := 2
         markercolor := :red
         label := false
-        ylabel := "Temperature (K)"
-        xlabel := "Specific Entropy (J/K/kg)"
-        title := "ORC Cycle on TS Diagram: $(prob.orc.fluid.components)"
         (phasedata[:s_dew], phasedata[:Td])
     end
     @series begin
@@ -633,7 +630,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Pump"
+        label := false
         (orcdata[:s_pump_array], orcdata[:T_pump_array])
     end
     @series begin
@@ -641,7 +638,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Evaporator"
+        label := false
         (orcdata[:s_evap_array], orcdata[:T_evap_array])
     end
     @series begin
@@ -649,7 +646,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Expander"
+        label := false
         (orcdata[:s_exp_array], orcdata[:T_exp_array])
     end
     @series begin
@@ -657,7 +654,7 @@ end
         linewidth := 2
         linestyle := :solid
         linecolor := :black
-        label := "Condenser"
+        label := false
         (orcdata[:s_cond_array], orcdata[:T_cond_array])
     end
     @series begin
@@ -682,7 +679,7 @@ end
         linewidth := 2
         linestyle := :dot
         linecolor := :green
-        label := "Secondary Fluid Condenser"
+        label := false
         (orcdata[:s_econ_evap], orcdata[:T_econ_evap])
     end
 
@@ -691,7 +688,10 @@ end
         linewidth := 2
         linestyle := :dot
         linecolor := :green
-        label := "Secondary Fluid Condenser"
+        label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "$(prob.orc.fluid.components)"
         (orcdata[:s_econ_cond], orcdata[:T_econ_cond])
     end
 end

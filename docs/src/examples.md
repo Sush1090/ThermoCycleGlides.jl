@@ -23,7 +23,7 @@ julia> ΔT_sc = 3; ΔT_sh = 10;
 
 julia> hp = HeatPump(fluid=fluid,z=[1.0],T_evap_in=T_evap_in,T_evap_out = T_evap_out,T_cond_in = T_cond_in,T_cond_out=T_cond_out,η_comp=η_comp,pp_evap=pp_evap,pp_cond=pp_cond,ΔT_sc = ΔT_sc,ΔT_sh = ΔT_sh);
 
-julia> sol_hp = solve(hp)
+julia> sol_hp = solve(hp,ThermoCycleParameters(autodiff=false))
 SolutionState{Float64, Int64}([0.12829257763187535, 1.4551588056895837], 16, 7, [0.0, 5.684341886080802e-14], [0.07660159441435545, 0.07660159441435545], [1.6566058479359296, 1.6566058479359296], true, 0, 2.5468671054250572e-15, 8.038873388460929e-14)
  
 julia> COP(hp,sol_hp)
@@ -35,7 +35,9 @@ julia> COP(hp,sol_hp)
 To plot do the following:
 
 ```julia
-plot_cycle(hp,sol_hp,N=300)
+using Plots
+
+plot(hp,sol_hp,N=100)
 ```
 
 ![HP_cyclopentane](Images/hp_cyclopentane.png)
