@@ -50,11 +50,11 @@ Now the same heatpump with an internal heat exchanger of effectiveness ($\epsilo
 ```julia
 julia> hp_ihex = HeatPumpRecuperator(hp=hp,ϵ=0.7);
 
-julia> sol_ihex = solve(hp_ihex)
-SolutionState{Float64, Int64}([0.12829257763131544, 1.4173574009406653], 8, 4, [3.524291969370097e-12, 8.827782949083485e-11], [0.07660159441435545, 0.07660159441435545], [1.6566058479359296, 1.6566058479359296], true, 0, 2.9326582172085184e-7, 8.83481511606116e-11, :subcritical)
+julia> sol_ihex = solve(hp_ihex,ThermoCycleParameters(autodiff = false))
+SolutionState{Float64, Int64}([0.12829257763094135, 1.4173574009393946], 20, 4, [-2.4442670110147446e-11, 1.475086719437968e-10], [0.07660159441435545, 0.07660159441435545], [1.6566058479359296, 1.6566058479359296], false, 2, 2.9305166342606847e-7, 1.4952007363807764e-10, :subcritical)
 
 julia> COP(hp_ihex,sol_ihex)
--3.8122385181795906
+-3.812238518177511
 ```
 ![HP_recupuerator_cycle](Images/hp_recuperaor_cycle_example.png)
 

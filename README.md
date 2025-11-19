@@ -35,17 +35,19 @@ julia> ΔT_sc = 3; ΔT_sh = 10;
 
 julia> hp = HeatPump(fluid=fluid,z=[1.0],T_evap_in=T_evap_in,T_evap_out = T_evap_out,T_cond_in = T_cond_in,T_cond_out=T_cond_out,η_comp=η_comp,pp_evap=pp_evap,pp_cond=pp_cond,ΔT_sc = ΔT_sc,ΔT_sh = ΔT_sh);
 
-julia> sol_hp = solve(hp)
-SolutionState{Float64, Int64}([0.12829257763187535, 1.4551588056895837], 16, 7, [0.0, 5.684341886080802e-14], [0.07660159441435545, 0.07660159441435545], [1.6566058479359296, 1.6566058479359296], true, 0, 2.5468671054250572e-15, 8.038873388460929e-14)
+julia> sol_hp = solve(hp,ThermoCycleParameters(autodiff=false))
+SolutionState{Float64, Int64}([0.12829257763094135, 1.4551588056942617], 20, 4, [1.1044676284654997e-10, 1.475086719437968e-10], [0.07660159441435545, 0.07660159441435545], [1.6566058479359296, 1.6566058479359296], false, 2, 2.859273217366616e-7, 1.8427505452964792e-10, :subcritical)
  
 julia> COP(hp,sol_hp)
--3.735868783526992
+-3.735868783511875
 ```
 
 To plot do the following;
 
 ```julia
-plot_cycle(hp,sol_hp,N=300)
+julia> using Plots
+
+julia> plot(hp,sol_hp,N = 100)
 ```
 
 ![HP_cyclopentane](docs/src/Images/hp_cyclopentane.png)
@@ -53,7 +55,7 @@ plot_cycle(hp,sol_hp,N=300)
 
 # Limitation
 
-1. Fluid models are limited to the ones provided by default in Clapeyron.jl
+1. Fluid models are limited to the ones provided by default in Clapeyron.jl, now restricted to `CubicModel` and `SingleFluid` model. 
 2. For now the solver is stable for sub-critical parameters. So if incase the solver does converge please check if the parameters provided allow the solution to be subcritical. 
 3. For mixtures, it is recommended to use parameters sufficently below the critical point.  
 4. If for solving `autodiff = true` then for the first run there will be some compile time. Subsequent runs will be faster. 
