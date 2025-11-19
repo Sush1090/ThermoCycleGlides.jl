@@ -43,10 +43,10 @@ Designing and optimising high-level heat pump (HP) and organic Rankine cycle (OR
 ThermoCycleGlides.jl provides a computational framework for solving this nonlinear pinch-point problem and determining the corresponding system conditions. It also includes a plotting framework for visualising the thermodynamic cycle and glide matching. The package follows the system characterisation outlined by [@Antoine-Laterre-2025] and employs a discretised heat exchanger model assuming equal heat transfer in each control volume, as described in [@ZUHLSDORF].
 
     
-# Example
+<!-- # Example
 
 ![hp_example](./images/joss_hp_diag.png) 
 
-![hp_example_sol](./images/joss_hp.png) 
+![hp_example_sol](./images/joss_hp.png)  -->
 
 # References
