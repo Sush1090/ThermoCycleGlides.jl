@@ -80,7 +80,7 @@ function plotting_data(prob::HeatPump,sol::SolutionState;N = 30,p_min = nothing)
         :T_evap_array => T_evap_array,
         :T_cond_sf_array => T_cond_sf_array,
         :T_evap_sf_array => T_evap_sf_array
-    )
+    ), p_min
 end
 
 function plotting_data(prob::ORC,sol::SolutionState;N = 30,p_min = nothing)
@@ -138,7 +138,7 @@ function plotting_data(prob::ORC,sol::SolutionState;N = 30,p_min = nothing)
         :T_cond_array => T_cond_array,
         :T_evap_sf_array => T_evap_sf_array,
         :T_cond_sf_array => T_cond_sf_array
-    )
+    ) ,  p_min
 end
 
 function plotting_data(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min = nothing)
@@ -223,7 +223,7 @@ function plotting_data(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min
         :T_evap_array => T_evap_array,
         :T_cond_sf_array => T_cond_sf_array,
         :T_evap_sf_array => T_evap_sf_array
-    )
+    ) , p_min
     return dict
 end
 
@@ -305,7 +305,7 @@ function plotting_data(prob::ORCEconomizer,sol::SolutionState;N = 30, p_min = no
         :T_evap_array => T_evap_array,
         :T_cond_sf_array => T_cond_sf_array,
         :T_evap_sf_array => T_evap_sf_array
-    )
+    ) , p_min
     return dict
 end
 
@@ -358,8 +358,9 @@ end
 end
 
 @recipe function f_plot(prob::HeatPump,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
-    phasedata = plotting_data(prob.fluid,prob.z;N=N,p_min=p_min,nanfix=nanfix)
-    hpdata = plotting_data(prob,sol,N=N,p_min=p_min)
+    hpdata,_p_min = plotting_data(prob,sol,N=N,p_min=p_min)
+    phasedata = plotting_data(prob.fluid,prob.z;N=N,p_min=_p_min,nanfix=nanfix)
+    
 
     # phase envelope - dew
     @series begin
@@ -432,8 +433,9 @@ end
     end
 end
 @recipe function f_plot(prob::ORC,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
-    phasedata = plotting_data(prob.fluid,prob.z;N=N,p_min=p_min,nanfix=nanfix)
-    orcdata = plotting_data(prob,sol,N=N,p_min=p_min)
+    orcdata,_p_min = plotting_data(prob,sol,N=N,p_min=p_min)
+    phasedata = plotting_data(prob.fluid,prob.z;N=N,p_min=_p_min,nanfix=nanfix)
+    
 
     # phase envelope - dew
     @series begin
@@ -508,8 +510,8 @@ end
 end
 
 @recipe function f_plot(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
-    phasedata = plotting_data(prob.hp.fluid,prob.hp.z;N=N,p_min=p_min,nanfix=nanfix)
-    hpdata = plotting_data(prob,sol,N=N,p_min=p_min)
+    hpdata,_p_min = plotting_data(prob,sol,N=N,p_min=p_min)
+    phasedata = plotting_data(prob.hp.fluid,prob.hp.z;N=N,p_min=_p_min,nanfix=nanfix) 
 
     # phase envelope - dew
     @series begin
@@ -601,10 +603,11 @@ end
 
 
 @recipe function f_plot(prob::ORCEconomizer,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
-    phasedata = plotting_data(prob.orc.fluid,prob.orc.z;N=N,p_min=p_min,nanfix=nanfix)
-    orcdata = plotting_data(prob,sol,N=N,p_min=p_min)
+    orcdata,_p_min = plotting_data(prob,sol,N=N,p_min=p_min)
+    phasedata = plotting_data(prob.orc.fluid,prob.orc.z;N=N,p_min=_p_min,nanfix=nanfix)
 
-# phase envelope - dew
+
+    # phase envelope - dew
     @series begin
         
         linestyle := :solid
