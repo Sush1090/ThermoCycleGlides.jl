@@ -13,7 +13,6 @@ import Clapeyron: molecular_weight
 
 abstract type ThermoCycleProblem end
 
-abstract type ThermoCycleSolution end
 
 #NonlinearSolver - NR
 include("NonlinearSolver/newton-raphson.jl")
@@ -37,8 +36,6 @@ include("Optimizations/Optimize.jl")
 include("Plots/cycleplots.jl")
 
 
-# PrecompileTools
-include("precompile.jl")
 
     function show(prob::ThermoCycleProblem)
         show_parameters(prob)
@@ -48,4 +45,6 @@ include("precompile.jl")
     end
 
     export show
+
+    export get_states, ThermoCycleProblem
 end
