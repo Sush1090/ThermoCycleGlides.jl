@@ -70,11 +70,11 @@ julia> fluid = cPR(["propane"],idealmodel = ReidIdeal);
 julia> orc = ORC(fluid = fluid,z = [1.0], T_evap_in = 360, T_evap_out = 340, T_cond_in = 280, T_cond_out = 290, η_expander = 0.75, η_pump = 0.8, ΔT_sh = 7.0, ΔT_sc= 3.0, pp_evap = 3.0, pp_cond = 3)
 ORC{Float64}(PR{ReidIdeal, TwuAlpha, NoTranslation, vdW1fRule}("Propane"), [1.0], 360.0, 340.0, 7.0, 280.0, 290.0, 3.0, 0.8, 0.75, 3.0, 3.0)
 
-julia> sol = solve(orc,ThermoCycleParameters())
-SolutionState{Float64, Int64}([27.24650730390755, 8.310317972863196], 6, 3, [1.943476490851026e-10, -2.1819346329721157e-8], [19.921551772573725, 6.969208543698516], [29.511108921525086, 9.094386318669063], true, 0, 1.1554874341578823e-5, 2.1820211851973873e-8, :subcritical)
+julia> sol = solve(orc,ThermoCycleParameters(autodiff=false))
+SolutionState{Float64, Int64}([27.24650730018187, 8.310317975013438], 15, 3, [5.294850780046545e-9, -1.1973043001489714e-8], [19.921551772573725, 6.969208543698516], [29.511108921525086, 9.094386318669063], false, 2, 1.1554828892488157e-5, 1.3091569940174529e-8, :subcritical)
 
 julia> η(orc,sol)
--0.08885630488485266
+-0.08885630486192948
 ```
 
 *Note:* Here, the efficiency is also negative as there is an enthalpy drop of the working fluid in the expander while there is an enthalpy gain in the evaporator. 
@@ -82,7 +82,9 @@ julia> η(orc,sol)
 To plot the ORC cycle: 
 
 ```julia
-julia> plot_cycle(orc,sol,N=300)
+julia> using Plots
+
+julia> plot(orc,sol,N =300)
 ```
 
 ![orc_propane](Images/orc_propane.png)
@@ -94,11 +96,11 @@ As for the heatpump we now construct the ORC with internal heat exchanger.
 ```julia
 julia> orc_ihex = ORCEconomizer(orc=orc,ϵ=0.7);
 
-julia> sol_ihex = solve(orc_ihex,ThermoCycleParameters())
-SolutionState{Float64, Int64}([26.973845637899313, 8.391221086633655], 6, 3, [3.3583091862965375e-10, -3.281326144133345e-8], [19.921551772573725, 6.969208543698516], [29.511108921525086, 9.094386318669063], true, 0, 1.4417396042634078e-5, 3.2814979945494535e-8, :subcritical)
+julia> sol_ihex = solve(orc_ihex,ThermoCycleParameters(autodiff=false))
+SolutionState{Float64, Int64}([26.973845640165056, 8.391221086120005], 15, 3, [-3.0100864023552276e-9, -3.514094260026468e-8], [19.921551772573725, 6.969208543698516], [29.511108921525086, 9.094386318669063], false, 2, 1.4416423095843544e-5, 3.5269625274231946e-8, :subcritical)
 
 julia> η(orc_ihex,sol_ihex)
--0.09082835333090268
+-0.0908283533392522
 ```
 ![ORC_economizer_example_cycle](Images/orc_economizer_cycle_example.png)
 
@@ -139,15 +141,21 @@ Solution type: subcritical
 
 
 # Plotting 
-To plot the cycle use the following API: 
+To plot the cycle use first load Plots.jl. Then follow:
 
 ```julia
-plot_cycle(prob::ThermoCycleProblem,sol::SolutionState,N=100)
+plot(prob::ThermoCycleProblem,sol::SolutionState,kwargs...)
+```
+
+To just plot the TS diagram of the fluid do:
+
+```julia
+plot(fluid::EoSModel,z::AbstractVector,kwargs...)
 ```
 
 # Limitation
 
-1. Fluid models are limited to the ones provided by default in Clapeyron.jl
-2. For now the solver is stable for sub-critical parameters. So if incase the solver does converge please check if the parameters provided allow the solution to be subcritical. 
-3. For mixtures, it is recommended to use parameters sufficently below the critical point.  
-4. If for solving `autodiff = true` then for the first run there will be some compile time. Subsequent runs will be faster. 
+1. Fluid models are limited to the ones provided by default in Clapeyron.jl. Now restricted to `CubicModel` and `SingleFluid` models. 
+2. For now the solver is stable for sub-critical parameters. So if incase the solver does not converge please check if the parameters provided allow the solution to be subcritical. 
+3. For mixtures, it is recommended to use parameters sufficently below the critical point as sometimes near crictical zone the computation of dew and bubble points can fail.   
+4. If for solving with `autodiff = true`, the first run will have significant compilation time. The subsequent runs will be faster.

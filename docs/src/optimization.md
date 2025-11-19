@@ -22,7 +22,7 @@ algo = ECA(options = options)
 
 We optimize the system
 ```julia
-result,hp_optimized = ThermoCycleGlides.optimize(hp,algo; autodiff = true,N = 20,lower = 2.0,tol = 1e-3)
+julia> result,hp_optimized = ThermoCycleGlides.optimize(hp,algo,ThermoCycleParameters())
 ```
 
 ```julia
@@ -110,8 +110,8 @@ To plot the cycle we do as before but now the optimized cycle is already returne
 **Note:** This is a metaheuristic method hence the converged answer for the user for this case can slighty be different based on number of function calls , time, solution etc ..
 
 ```julia
-sol = solve(hp_optimized,autodiff = true,N = 20,xtol = 1e-6,ftol = 1e-6,max_iter= 1000);
-plot_cycle(hp_optimized,sol;N = 300)
+sol = solve(hp_optimized,ThermoCycleParameters());
+plot(hp_optimized,sol,N = 100)
 ```
 
 The `HeatPump` cycle before optimization had a COP of `-3.23`

@@ -55,7 +55,7 @@ julia> plot(hp,sol_hp,N = 100)
 
 # Limitation
 
-1. Fluid models are limited to the ones provided by default in Clapeyron.jl, now restricted to `CubicModel` and `SingleFluid` model. 
-2. For now the solver is stable for sub-critical parameters. So if incase the solver does converge please check if the parameters provided allow the solution to be subcritical. 
-3. For mixtures, it is recommended to use parameters sufficently below the critical point.  
-4. If for solving `autodiff = true` then for the first run there will be some compile time. Subsequent runs will be faster. 
+1. Fluid models are limited to the ones provided by default in Clapeyron.jl. Now restricted to `CubicModel` and `SingleFluid` models. 
+2. For now the solver is stable for sub-critical parameters. So if incase the solver does not converge please check if the parameters provided allow the solution to be subcritical. 
+3. For mixtures, it is recommended to use parameters sufficently below the critical point as sometimes near crictical zone the computation of dew and bubble points can fail.   
+4. If for solving with `autodiff = true`, the first run will have significant compilation time. The subsequent runs will be faster.
