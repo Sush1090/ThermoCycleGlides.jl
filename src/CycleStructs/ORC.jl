@@ -6,7 +6,7 @@ Defines an Organic Rankine Cycle (ORC) problem with thermodynamic and design
 parameters specified in Kelvin and dimensionless efficiencies.
 
 # Fields
-- `fluid::EoSModel`: Equation of State (EoS) model representing the working fluid.
+- `fluid::CubicModel`: Equation of State (EoS) model representing the working fluid. For now it has to be Cubic EoS.
 - `z::AbstractVector{T}`: Mole fraction composition vector of the working fluid.
 - `T_evap_in::T`: Inlet temperature of the evaporator [K].
 - `T_evap_out::T`: Outlet temperature of the evaporator [K].
@@ -38,6 +38,8 @@ end
 
 function ORC(; fluid::EoSModel, z, T_evap_in, T_evap_out, T_cond_in, T_cond_out,
              η_pump, η_expander, pp_evap, pp_cond, ΔT_sh, ΔT_sc)
+
+    @assert fluid isa CubicModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
 
     @assert length(z) > 0 "Composition vector z must not be empty"
     @assert length(fluid.components) == length(z) "Composition vector z must match number of fluid components"
@@ -148,15 +150,20 @@ function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
     if length(prob.fluid.components) == 1
         return F_pure(prob,x)
     end
+    
     p_evap,p_cond = x .* 101325 # convert to Pa
-    T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+
+    T_evap_out = Clapeyron.temperature(prob.fluid, flash_res1_evap) + prob.ΔT_sh
     # @show T_evap_out
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
 
     h_exp_in = h_evap_out;
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
     h_cond_in = h_exp_out
-    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    T_cond_out = Clapeyron.temperature(prob.fluid, flash_res0_cond) - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
     h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
     T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
@@ -318,8 +325,10 @@ function F(prob::ORCEconomizer,x::AbstractVector{T};N::Int64) where {T<:Real}
         return F_pure(prob,x)
     end
     p_evap,p_cond = x .* 101325 # convert to Pa
-    T_sat_evap = Clapeyron.dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1]
-    T_sat_cond = Clapeyron.bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1]
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+    T_sat_evap = Clapeyron.temperature(prob.orc.fluid, flash_res1_evap)
+    T_sat_cond = Clapeyron.temperature(prob.orc.fluid, flash_res0_cond)
     T_evap_out = T_sat_evap + prob.orc.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
     h_exp_in = h_evap_out;
@@ -436,4 +445,46 @@ function _F(prob::ORC, x::AbstractVector{T}) where {T<:Real}
     ΔT_evap = minimum(T_evap_sf_f.(h_evap_array) .- T_evap_array) - prob.pp_evap
     ΔT_cond = minimum(T_cond_array .- T_cond_sf_f.(h_cond_array)) - prob.pp_cond
     return [ΔT_evap,ΔT_cond]
+end
+
+function get_states(prob::ORC,sol::SolutionState)
+    p_evap,p_cond = sol.x .* 101325
+    T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
+    h_cond_out_spec = h_cond_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_cond_out_spec = entropy(prob.fluid,p_cond,T_cond_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_cond_out, prob.z, prob.fluid)
+    T_pump_out = Clapeyron.PH.temperature(prob.fluid, p_evap, h_pump_out, prob.z)
+    h_pump_out_spec = h_pump_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_pump_out_spec = entropy(prob.fluid,p_evap,T_pump_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    T_evap_out = Clapeyron.dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
+    h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
+    h_evap_out_spec = h_evap_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_evap_out_spec = entropy(prob.fluid,p_evap,T_evap_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_evap_out, prob.z, prob.fluid)
+    T_exp_out = Clapeyron.PH.temperature(prob.fluid, p_cond, h_exp_out, prob.z)
+    h_exp_out_spec = h_exp_out./Clapeyron.molecular_weight(prob.fluid,prob.z)
+    s_exp_out_spec = entropy(prob.fluid,p_cond,T_exp_out,prob.z)./Clapeyron.molecular_weight(prob.fluid,prob.z)
+
+
+    dict = Dict(
+        :p_evap => p_evap,
+        :p_cond => p_cond,
+        :T_cond_out => T_cond_out,
+        :h_cond_out => h_cond_out,
+        :h_cond_out => h_cond_out_spec,
+        :s_cond_out => s_cond_out_spec,
+        :T_pump_out => T_pump_out,
+        :h_pump_out => h_pump_out_spec,
+        :s_pump_out => s_pump_out_spec,
+        :T_evap_out => T_evap_out,
+        :h_evap_out => h_evap_out_spec,
+        :s_evap_out => s_evap_out_spec,
+        :T_exp_out => T_exp_out,
+        :h_exp_out => h_exp_out_spec,
+        :s_exp_out => s_exp_out_spec
+    )
 end

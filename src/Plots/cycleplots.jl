@@ -1,16 +1,41 @@
+function plotting_data(fluid::EoSModel,z::AbstractVector;N = 30,p_min = nothing,nanfix = true)
+    @assert length(fluid.components) == length(z) "Components and composition vector length mismatch"
+    if isnothing(p_min)
+        p_min = 101325*0.4
+    end
+    _,p_crit,_ = crit_mix(fluid,z)
+    p_array = collect(range(p_min, p_crit, length = N))
+    Tdew(x) = dew_temperature(fluid,x,z)[1]
+    Tbub(x) = bubble_temperature(fluid,x,z)[1]
+    Td = Tdew.(p_array);
+    Tb = Tbub.(p_array);
+    Td[end] = crit_mix(fluid,z)[1];
+    Tb[end] = crit_mix(fluid,z)[1];
+    if nanfix
+        ThermoCycleGlides.fix_nan!(Td)
+        ThermoCycleGlides.fix_nan!(Tb)
+    end
+    s_bubble = similar(Tb);
+    for i in eachindex(Tb)
+        s_bubble[i] = entropy(fluid,p_array[i],Tb[i],z,phase = :liquid)./Clapeyron.molecular_weight(fluid,z)
+    end
+    s_dew = similar(Td);
+    for i in eachindex(Td)
+        s_dew[i] = entropy(fluid, p_array[i], Td[i],z,phase = :vapor)./Clapeyron.molecular_weight(fluid,z)
+    end
+    return Dict(
+        :Tb => Tb,
+        :Td => Td,
+        :s_bubble => s_bubble,
+        :s_dew => s_dew
+    )
+end
 
-
-"""
-Plots TS diagram
-"""
-function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
-  if isnothing(p_min)
-      p_min = 0.5*sol[1]*101325
-  end
-    fig = plot()
-    p_evap, p_cond = sol .* 101325 # convert to Pa
-    fig_phase = plot_phase(fig,prob.fluid,prob.z; N = N, p_min = p_min)
-
+function plotting_data(prob::HeatPump,sol::SolutionState;N = 30,p_min = nothing)
+    if isnothing(p_min)
+        p_min = 0.5*sol.x[1]*101325
+    end
+    p_evap , p_cond = sol.x .* 101325
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_comp_in = enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
     h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
@@ -20,46 +45,50 @@ function plot_cycle(prob::HeatPump,sol::AbstractVector;N = 30,p_min = nothing)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
     s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
     s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_comp_array, T_comp_array, label = "Compressor", color = :blue)
-
     T_cond_out = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
     h_cond_array = collect(range(h_cond_out, h_comp_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
     s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
-    h_valve_in = h_cond_out
+     h_valve_in = h_cond_out
     h_valve_out = h_valve_in
     h_valve_array = collect(range(h_valve_in, h_valve_out, length = N))
     p_valve_array = collect(range(p_cond, p_evap, length = N))
     T_valve_array = T_ph.(p_valve_array, h_valve_array)
     s_valve_array = s_ph.(p_valve_array, h_valve_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_valve_array, T_valve_array, label = "Expansion Valve", color = :green)
+
     h_evap_in = h_valve_out
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
     s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
 
     # secondary fluids
     T_cond_sf_array = collect(range(prob.T_cond_in, prob.T_cond_out, length = N))
-    plot!(fig_phase,s_cond_array, T_cond_sf_array, label = "Condenser Secondary Fluid", color = :orange, linestyle = :dash)
-
     T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length = N))
-    plot!(fig_phase,s_evap_array, T_evap_sf_array, label = "Evaporator Secondary Fluid", color = :purple, linestyle = :dash)
-    return fig_phase
+
+    return Dict(
+        :s_comp_array => s_comp_array,
+        :T_comp_array => T_comp_array,
+        :s_cond_array => s_cond_array,
+        :T_cond_array => T_cond_array,
+        :s_valve_array => s_valve_array,
+        :T_valve_array => T_valve_array,
+        :s_evap_array => s_evap_array,
+        :T_evap_array => T_evap_array,
+        :T_cond_sf_array => T_cond_sf_array,
+        :T_evap_sf_array => T_evap_sf_array
+    )
 end
 
-function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
+function plotting_data(prob::ORC,sol::SolutionState;N = 30,p_min = nothing)
     if isnothing(p_min)
-      p_min = 0.5*sol[2]*101325
+      p_min = 0.5*sol.x[2]*101325
     end
-    fig = plot()
-    p_evap, p_cond = sol .* 101325 # convert to Pa
-    fig_phase = plot_phase(fig,prob; N = N, p_min = p_min)
+    p_evap, p_cond = sol.x .* 101325 # convert to Pa
+
     T_pump_in = bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
     h_pump_in = Clapeyron.enthalpy(prob.fluid, p_cond, T_pump_in, prob.z)
     h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_pump_in, prob.z, prob.fluid)
@@ -69,7 +98,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     s_pt(p,t) = entropy(prob.fluid, p, t, prob.z)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
     s_pump_array = s_pt.(p_cond, T_pump_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_pump_array, T_pump_array, label = "Pump", color = :blue)
+   
 
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
@@ -77,7 +106,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
     s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
+ 
 
     h_exp_in = h_evap_out
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
@@ -85,7 +114,7 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     p_exp_array = collect(range(p_evap, p_cond, length = N))
     T_exp_array = T_ph.(p_exp_array, h_exp_array)
     s_exp_array = s_ph.(p_exp_array, h_exp_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_exp_array, T_exp_array, label = "Expander", color = :orange)
+
 
     h_cond_in = h_exp_out
     T_cond_out = bubble_temperature(prob.fluid, p_cond, prob.z)[1] - prob.ΔT_sc
@@ -93,25 +122,31 @@ function plot_cycle(prob::ORC, sol::AbstractVector;N = 30,p_min = nothing)
     h_cond_array = collect(range(h_cond_in, h_cond_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
     s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.fluid,prob.z)
-    plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
+ 
     # secondary fluids
     T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length = N))
-    plot!(fig_phase, s_evap_array, T_evap_sf_array, label = "Evaporator Secondary Fluid", color = :purple, linestyle = :dash)
+
     T_cond_sf_array = collect(range(prob.T_cond_out, prob.T_cond_in, length = N))
-    plot!(fig_phase, s_cond_array, T_cond_sf_array, label = "Condenser Secondary Fluid", color = :orange, linestyle = :dash)
-    # @show minimum(T_evap_sf_array .- T_evap_array)
-    return fig_phase
+    return Dict(
+        :s_pump_array => s_pump_array,
+        :T_pump_array => T_pump_array,
+        :s_evap_array => s_evap_array,
+        :T_evap_array => T_evap_array,
+        :s_exp_array => s_exp_array,
+        :T_exp_array => T_exp_array,
+        :s_cond_array => s_cond_array,
+        :T_cond_array => T_cond_array,
+        :T_evap_sf_array => T_evap_sf_array,
+        :T_cond_sf_array => T_cond_sf_array
+    )
 end
 
-
-
-function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min = nothing)
-  if isnothing(p_min)
-      p_min = 0.5*sol[1]*101325
+function plotting_data(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min = nothing)
+    if isnothing(p_min)
+      p_min = 0.5*sol.x[1]*101325
   end
-    fig = plot()
-    p_evap, p_cond = sol .* 101325 # convert to Pa
-    fig_phase = plot_phase(fig,prob.hp.fluid,prob.hp.z; N = N, p_min = p_min)
+    p_evap, p_cond = sol.x .* 101325 # convert to Pa
+
 
     T_evap_out = Clapeyron.dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
@@ -130,7 +165,7 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
     s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
     s_comp_array = s_ph_vapour.(p_comp_array, h_comp_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
-    plot!(fig_phase, s_comp_array, T_comp_array, label = "Compressor", color = :blue)
+
 
     # Recuperator
     h_recoup_evap_in = h_evap_out
@@ -138,14 +173,13 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
     h_recoup_evap_array = collect(range(h_recoup_evap_in, h_recout_evap_out, length = N))
     T_recoup_comp = T_ph.(p_evap, h_recoup_evap_array)
     s_recoup_comp = s_ph_vapour.(p_evap, h_recoup_evap_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
-    plot!(fig_phase, s_recoup_comp, T_recoup_comp, label = "iHEX", color = :black, linestyle = :dash)
+
 
     h_recoup_cond_in = h_cond_out
     h_recout_cond_out = h_recoup_cond_in - q_ihex
     h_recoup_cond_array = collect(range(h_recoup_cond_in, h_recout_cond_out, length = N))
     T_recoup_cond = T_ph.(p_cond, h_recoup_cond_array)
     s_recoup_cond = s_ph_vapour.(p_cond, h_recoup_cond_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
-    plot!(fig_phase, s_recoup_cond, T_recoup_cond, label = false, color = :black, linestyle = :dash)
 
     T_cond_out = Clapeyron.bubble_temperature(prob.hp.fluid, p_cond, prob.hp.z)[1] - prob.hp.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.hp.fluid, p_cond, T_cond_out, prob.hp.z)
@@ -153,39 +187,52 @@ function plot_cycle(prob::HeatPumpRecuperator,sol::AbstractVector;N = 30,p_min =
     T_cond_array = T_ph.(p_cond, h_cond_array)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
     s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
-    plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
+
     h_valve_in = h_cond_out - q_ihex
     h_valve_out = h_valve_in
     h_valve_array = collect(range(h_valve_in, h_valve_out, length = N))
     p_valve_array = collect(range(p_cond, p_evap, length = N))
     T_valve_array = T_ph.(p_valve_array, h_valve_array)
     s_valve_array = s_ph.(p_valve_array, h_valve_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
-    plot!(fig_phase, s_valve_array, T_valve_array, label = "Expansion Valve", color = :green)
+
     h_evap_in = h_valve_out
     T_evap_out = Clapeyron.dew_temperature(prob.hp.fluid, p_evap, prob.hp.z)[1] + prob.hp.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.hp.fluid, p_evap, T_evap_out, prob.hp.z)
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
     s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.hp.fluid,prob.hp.z)
-    plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
+
 
     # secondary fluids
     T_cond_sf_array = collect(range(prob.hp.T_cond_in, prob.hp.T_cond_out, length = N))
-    plot!(fig_phase,s_cond_array, T_cond_sf_array, label = "Condenser Secondary Fluid", color = :orange, linestyle = :dash)
+
 
     T_evap_sf_array = collect(range(prob.hp.T_evap_out, prob.hp.T_evap_in, length = N))
-    plot!(fig_phase,s_evap_array, T_evap_sf_array, label = "Evaporator Secondary Fluid", color = :purple, linestyle = :dash)
-    return fig_phase
+    dict = Dict(
+        :s_comp_array => s_comp_array,
+        :T_comp_array => T_comp_array,
+        :s_recoup_comp => s_recoup_comp,
+        :T_recoup_comp => T_recoup_comp,
+        :s_recoup_cond => s_recoup_cond,
+        :T_recoup_cond => T_recoup_cond,
+        :s_cond_array => s_cond_array,
+        :T_cond_array => T_cond_array,
+        :s_valve_array => s_valve_array,
+        :T_valve_array => T_valve_array,
+        :s_evap_array => s_evap_array,
+        :T_evap_array => T_evap_array,
+        :T_cond_sf_array => T_cond_sf_array,
+        :T_evap_sf_array => T_evap_sf_array
+    )
+    return dict
 end
 
-
-function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N = 30,p_min = nothing)
-      if isnothing(p_min)
-      p_min = 0.5*sol[2]*101325
+function plotting_data(prob::ORCEconomizer,sol::SolutionState;N = 30, p_min = nothing)
+    if isnothing(p_min)
+      p_min = 0.5*sol.x[2]*101325
     end
-    fig = plot()
-    p_evap, p_cond = sol .* 101325 # convert to Pa
-    fig_phase = ThermoCycleGlides.plot_phase(fig,prob.orc; N = N, p_min = p_min)
+    
+    p_evap, p_cond = sol.x .* 101325 # convert to Pa
     T_pump_in = bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1] - prob.orc.ΔT_sc
     h_pump_in = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_pump_in, prob.orc.z)
     h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h_pump_in, prob.orc.z, prob.orc.fluid)
@@ -197,7 +244,7 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     s_pt(p,t) = entropy(prob.orc.fluid, p, t, prob.orc.z)
     s_ph(p,h) = Clapeyron.PH.entropy(prob.orc.fluid, p, h, prob.orc.z)
     s_pump_array = s_pt.(p_cond, T_pump_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
-    plot!(fig_phase, s_pump_array, T_pump_array, label = "Pump", color = :blue)
+
 
     T_evap_out = dew_temperature(prob.orc.fluid, p_evap, prob.orc.z)[1] + prob.orc.ΔT_sh
     h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
@@ -207,7 +254,7 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     p_exp_array = collect(range(p_evap, p_cond, length = N))
     T_exp_array = T_ph.(p_exp_array, h_exp_array)
     s_exp_array = s_ph.(p_exp_array, h_exp_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
-    plot!(fig_phase, s_exp_array, T_exp_array, label = "Expander", color = :orange)
+
     
     # Economizer
     h_econ_in = h_exp_out
@@ -218,17 +265,17 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     h_econ_cond_array = collect(range(h_exp_out, h_cond_in, length = N))
     T_econ_cond = T_ph.(p_cond, h_econ_cond_array)
     s_econ_cond = s_ph.(p_cond, h_econ_cond_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
-    plot!(fig_phase, s_econ_cond, T_econ_cond, label = "Economizer", color = :black, linestyle = :dash)
+
     h_econ_evap_array = collect(range(h_pump_out, h_evap_in, length = N))
     T_econ_evap = T_ph.(p_evap, h_econ_evap_array)
     s_econ_evap = s_ph.(p_evap, h_econ_evap_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
-    plot!(fig_phase, s_econ_evap, T_econ_evap, label = false, color = :black, linestyle = :dash)
+
 
 
     h_evap_array = collect(range(h_evap_in, h_evap_out, length = N))
     T_evap_array = T_ph.(p_evap, h_evap_array)
     s_evap_array = s_ph.(p_evap, h_evap_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
-    plot!(fig_phase, s_evap_array, T_evap_array, label = "Evaporator", color = :purple)
+
 
 
     T_cond_out = bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1] - prob.orc.ΔT_sc
@@ -236,96 +283,414 @@ function plot_cycle(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector;N 
     h_cond_array = collect(range(h_cond_in, h_cond_out, length = N))
     T_cond_array = T_ph.(p_cond, h_cond_array)
     s_cond_array = s_ph.(p_cond, h_cond_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
-    plot!(fig_phase, s_cond_array, T_cond_array, label = "Condenser", color = :red)
+
     # secondary fluids
     T_evap_sf_array = collect(range(prob.orc.T_evap_out, prob.orc.T_evap_in, length = N))
-    plot!(fig_phase, s_evap_array, T_evap_sf_array, label = "Evaporator Secondary Fluid", color = :purple, linestyle = :dash)
+
     T_cond_sf_array = collect(range(prob.orc.T_cond_out, prob.orc.T_cond_in, length = N))
-    plot!(fig_phase, s_cond_array, T_cond_sf_array, label = "Condenser Secondary Fluid", color = :orange, linestyle = :dash)
+
     # @show minimum(T_evap_sf_array .- T_evap_array)
-    return fig_phase
+    dict = Dict(
+        :s_pump_array => s_pump_array,
+        :T_pump_array => T_pump_array,
+        :s_econ_evap => s_econ_evap,
+        :T_econ_evap => T_econ_evap,
+        :s_econ_cond => s_econ_cond,
+        :T_econ_cond => T_econ_cond,
+        :s_cond_array => s_cond_array,
+        :T_cond_array => T_cond_array,
+        :s_exp_array => s_exp_array,
+        :T_exp_array => T_exp_array,
+        :s_evap_array => s_evap_array,
+        :T_evap_array => T_evap_array,
+        :T_cond_sf_array => T_cond_sf_array,
+        :T_evap_sf_array => T_evap_sf_array
+    )
+    return dict
 end
 
-function plot_phase(fig::Plots.Plot,prob::ORC;N = 30,p_min = 101325*0.4)
-  if length(prob.fluid.components) == 1
-    return plot_phase_pure(fig,prob.fluid,prob.z; N = N, p_min = p_min)
+@recipe function f_phase(fluid::EoSModel,z::AbstractVector;N = 30,p_min = nothing,nanfix = true) 
+  @assert length(fluid.components) == length(z) "Components and composition vector length mismatch"
+  if isnothing(p_min)
+      p_min = 101325*0.4
   end
-  if length(prob.fluid.components) >1
-    return plot_phase_mix(fig,prob.fluid,prob.z,N=N,p_min = p_min)
-  end
-  throw(error("IDK what you have passed to the function"))
-end
-
-function plot_phase(fig::Plots.Plot,prob::HeatPump; N = 30,p_min = 101325*0.4)
-
-  if length(prob.fluid.components) == 1
-    return plot_phase_pure(fig,prob.fluid,prob.z; N = N, p_min = p_min)
-  end
-  if length(prob.fluid.components) >1
-    return plot_phase_mix(fig,prob.fluid,prob.z,N=N,p_min = p_min)
-  end
-  throw(error("IDK what you have passed to the function"))
-end
-
-function plot_phase(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100,p_min = 101325*0.4)
-  if length(z) == 1
-    return plot_phase_pure(fig,fluid,z,N = N,p_min = p_min)
-  end
-  if length(z) > 1
-    return plot_phase_mix(fig,fluid,z,N=N,p_min = p_min)
-  end
-  throw(error("IDK what you have passed to the function"))
-end
-
-function plot_phase_pure(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector; N = 100,p_min = 101325*0.4)
-    @assert length(fluid.components) == 1
-    pcrit = crit_pure(fluid)[2]
-    p_array = collect(range(p_min, pcrit, length = N))
-    Tsat(x) = saturation_temperature(fluid, x)[1]
-    T = Tsat.(p_array)
-    T[end] = crit_pure(fluid)[1]
-    s_l = similar(T)
-    for i in eachindex(T)
-        s_l[i] = entropy(fluid,p_array[i],T[i],z,phase =:liquid)./molecular_weight(fluid,z)
-    end
-    s_g = similar(T)
-    for i in eachindex(T)
-        s_g[i] = entropy(fluid, p_array[i], T[i],z,phase =:vapor)./molecular_weight(fluid,z)
-    end
-
-    plot!(fig,s_l, T, label = false, ylabel = "Temperature (K)", xlabel = "Specific Entropy (J/K/kg)", title = "$(fluid.components[1])")
-    plot!(fig, s_g, T, label = false)
-    return fig
-end
-
-
-function plot_phase_mix(fig::Plots.Plot,fluid::EoSModel,z::AbstractVector;N = 100, p_min = 101325*0.4)
-  @assert length(fluid.components) >= 2 
-  Tcrit,pcrit,_ = crit_mix(fluid,z)
-  p_array = collect(range(p_min, pcrit, length = N))
+  _,p_crit,_ = crit_mix(fluid,z)
+  p_array = collect(range(p_min, p_crit, length = N))
   Tdew(x) = dew_temperature(fluid,x,z)[1]
   Tbub(x) = bubble_temperature(fluid,x,z)[1]
   Td = Tdew.(p_array);
   Tb = Tbub.(p_array);
-  Td[end] = Tcrit;
-  Tb[end] = Tcrit;
-  ThermoCycleGlides.fix_nan!(Td)
-  ThermoCycleGlides.fix_nan!(Tb)
-  sb = similar(Tb);
-  for i in eachindex(Tb)
-      sb[i] = entropy(fluid,p_array[i],Tb[i],z,phase =:liquid)./molecular_weight(fluid,z)
+  Td[end] = crit_mix(fluid,z)[1];
+  Tb[end] = crit_mix(fluid,z)[1];
+    if nanfix
+        ThermoCycleGlides.fix_nan!(Td)
+        ThermoCycleGlides.fix_nan!(Tb)
+    end
+    linewidth := 2
+  @series begin
+    linestyle := :solid
+    label := false
+    ylabel := "Temperature (K)"
+    xlabel := "Specific Entropy (J/K/kg)"
+    title := "$(fluid.components)"
+      sb = similar(Tb);
+      for i in eachindex(Tb)
+        sb[i] = entropy(fluid,p_array[i],Tb[i],z,phase = :liquid)./Clapeyron.molecular_weight(fluid,z)
+      end
+        (sb,Tb)
   end
-  sd = similar(Td)
-  for i in eachindex(Td)
-    sd[i] = entropy(fluid, p_array[i], Td[i],z,phase =:vapor)./molecular_weight(fluid,z)
+
+  
+    @series begin
+    #   seriestype := :auto
+    linestyle := :solid
+    label := false
+    ylabel := "Temperature (K)"
+    xlabel := "Specific Entropy (J/K/kg)"
+    title := "$(fluid.components)"
+    
+    sd = similar(Td);
+      for i in eachindex(Td)
+        sd[i] = entropy(fluid, p_array[i], Td[i],z,phase = :vapor)./Clapeyron.molecular_weight(fluid,z)
+      end
+        (sd,Td)
   end
-  plot!(fig,sb, Tb, label = false, ylabel = "Temperature (K)", xlabel = "Specific Entropy (J/K/Kg)", title = "$(fluid.components)")
-  plot!(fig, sd, Td, label = false)
 end
 
-export plot_cycle, plot_phase
+@recipe function f_plot(prob::HeatPump,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
+    phasedata = plotting_data(prob.fluid,prob.z;N=N,p_min=p_min,nanfix=nanfix)
+    hpdata = plotting_data(prob,sol,N=N,p_min=p_min)
 
+    # phase envelope - dew
+    @series begin
+        
+        linestyle := :solid
+        linewidth := 2
+        markercolor := :red
+        label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "Heat Pump Cycle on TS Diagram: $(prob.fluid.components)"
+        (phasedata[:s_dew], phasedata[:Td])
+    end
+    @series begin
+        # phase envelope - bubble
+        linewidth := 2
+        linestyle := :solid
+        markercolor := :blue
+        label := false
+        (phasedata[:s_bubble], phasedata[:Tb])
+    end
 
-function plot_cycle(prob::ThermoCycleProblem,sol::SolutionState;N = 30,p_min = nothing)
-    return plot_cycle(prob,sol.x;N = N,p_min = p_min)
+    @series begin
+        # compressor
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Compressor"
+        (hpdata[:s_comp_array], hpdata[:T_comp_array])
+    end
+    @series begin
+        # condensor
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Condenser"
+        (hpdata[:s_cond_array], hpdata[:T_cond_array])
+    end
+    @series begin
+        # valve
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Valve"
+        (hpdata[:s_valve_array], hpdata[:T_valve_array])
+    end
+    @series begin
+        # evaporator
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Evaporator"
+        (hpdata[:s_evap_array], hpdata[:T_evap_array])
+    end
+    @series begin
+        # sf evaporator
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :blue
+        label := "Secondary Fluid Evaporator"
+        (hpdata[:s_evap_array], hpdata[:T_evap_sf_array])
+    end
+    @series begin
+        # sf condenser
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :red
+        label := "Secondary Fluid Condenser"
+        (hpdata[:s_cond_array], hpdata[:T_cond_sf_array])
+    end
 end
+@recipe function f_plot(prob::ORC,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
+    phasedata = plotting_data(prob.fluid,prob.z;N=N,p_min=p_min,nanfix=nanfix)
+    orcdata = plotting_data(prob,sol,N=N,p_min=p_min)
+
+    # phase envelope - dew
+    @series begin
+        
+        linestyle := :solid
+        linewidth := 2
+        markercolor := :red
+        label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "ORC Cycle on TS Diagram: $(prob.fluid.components)"
+        (phasedata[:s_dew], phasedata[:Td])
+    end
+    @series begin
+        # phase envelope - bubble
+        linewidth := 2
+        linestyle := :solid
+        markercolor := :blue
+        label := false
+        (phasedata[:s_bubble], phasedata[:Tb])
+    end
+
+    @series begin
+        # pump
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Pump"
+        (orcdata[:s_pump_array], orcdata[:T_pump_array])
+    end
+    @series begin
+        # evaporator
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Evaporator"
+        (orcdata[:s_evap_array], orcdata[:T_evap_array])
+    end
+    @series begin
+        # expander
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Expander"
+        (orcdata[:s_exp_array], orcdata[:T_exp_array])
+    end
+    @series begin
+        # condensor
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Condenser"
+        (orcdata[:s_cond_array], orcdata[:T_cond_array])
+    end
+    @series begin
+        # sf evaporator
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :blue
+        label := "Secondary Fluid Evaporator"
+        (orcdata[:s_evap_array], orcdata[:T_evap_sf_array])
+    end
+    @series begin
+        # sf condenser
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :red
+        label := "Secondary Fluid Condenser"
+        (orcdata[:s_cond_array], orcdata[:T_cond_sf_array])
+    end
+    
+end
+
+@recipe function f_plot(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
+    phasedata = plotting_data(prob.hp.fluid,prob.hp.z;N=N,p_min=p_min,nanfix=nanfix)
+    hpdata = plotting_data(prob,sol,N=N,p_min=p_min)
+
+    # phase envelope - dew
+    @series begin
+        
+        linestyle := :solid
+        linewidth := 2
+        markercolor := :red
+        label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "Heat Pump with Recuperator Cycle on TS Diagram: $(prob.hp.fluid.components)"
+        (phasedata[:s_dew], phasedata[:Td])
+    end
+    @series begin
+        # phase envelope - bubble
+        linewidth := 2
+        linestyle := :solid
+        markercolor := :blue
+        label := false
+        (phasedata[:s_bubble], phasedata[:Tb])
+    end
+
+    @series begin
+        # compressor
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Compressor"
+        (hpdata[:s_comp_array], hpdata[:T_comp_array])
+    end
+    @series begin
+        # recuperator - comp side
+        linewidth := 2
+        linestyle := :dot
+        linecolor := :green
+        label := "Recuperator Compressor Side"
+        (hpdata[:s_recoup_comp], hpdata[:T_recoup_comp])
+    end
+    @series begin
+        # recuperator - cond side
+        linewidth := 2
+        linestyle := :dot
+        linecolor := :green
+        label := "Recuperator Condenser Side"
+        (hpdata[:s_recoup_cond], hpdata[:T_recoup_cond])
+    end
+    @series begin
+        # condensor
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Condenser"
+        (hpdata[:s_cond_array], hpdata[:T_cond_array])
+    end
+    @series begin
+        # valve
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Valve"
+        (hpdata[:s_valve_array], hpdata[:T_valve_array])
+    end
+    @series begin 
+        # sf evaporator
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :blue
+        label := "Secondary Fluid Evaporator"
+        (hpdata[:s_evap_array], hpdata[:T_evap_sf_array])
+    end
+
+    @series begin 
+        # sf condenser
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :red
+        label := "Secondary Fluid Condenser"
+        (hpdata[:s_cond_array], hpdata[:T_cond_sf_array])
+    end
+    @series begin
+        # evaporator
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Evaporator"
+        (hpdata[:s_evap_array], hpdata[:T_evap_array])
+    end
+end
+
+
+@recipe function f_plot(prob::ORCEconomizer,sol::SolutionState;N = 30,p_min = nothing,nanfix = true)
+    phasedata = plotting_data(prob.orc.fluid,prob.orc.z;N=N,p_min=p_min,nanfix=nanfix)
+    orcdata = plotting_data(prob,sol,N=N,p_min=p_min)
+
+# phase envelope - dew
+    @series begin
+        
+        linestyle := :solid
+        linewidth := 2
+        markercolor := :red
+        label := false
+        ylabel := "Temperature (K)"
+        xlabel := "Specific Entropy (J/K/kg)"
+        title := "ORC Cycle on TS Diagram: $(prob.orc.fluid.components)"
+        (phasedata[:s_dew], phasedata[:Td])
+    end
+    @series begin
+        # phase envelope - bubble
+        linewidth := 2
+        linestyle := :solid
+        markercolor := :blue
+        label := false
+        (phasedata[:s_bubble], phasedata[:Tb])
+    end
+
+    @series begin
+        # pump
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Pump"
+        (orcdata[:s_pump_array], orcdata[:T_pump_array])
+    end
+    @series begin
+        # evaporator
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Evaporator"
+        (orcdata[:s_evap_array], orcdata[:T_evap_array])
+    end
+    @series begin
+        # expander
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Expander"
+        (orcdata[:s_exp_array], orcdata[:T_exp_array])
+    end
+    @series begin
+        # condensor
+        linewidth := 2
+        linestyle := :solid
+        linecolor := :black
+        label := "Condenser"
+        (orcdata[:s_cond_array], orcdata[:T_cond_array])
+    end
+    @series begin
+        # sf evaporator
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :blue
+        label := "Secondary Fluid Evaporator"
+        (orcdata[:s_evap_array], orcdata[:T_evap_sf_array])
+    end
+    @series begin
+        # sf condenser
+        linewidth := 2
+        linestyle := :dash
+        linecolor := :red
+        label := "Secondary Fluid Condenser"
+        (orcdata[:s_cond_array], orcdata[:T_cond_sf_array])
+    end
+
+    @series begin
+        #eco evap
+        linewidth := 2
+        linestyle := :dot
+        linecolor := :green
+        label := "Secondary Fluid Condenser"
+        (orcdata[:s_econ_evap], orcdata[:T_econ_evap])
+    end
+
+    @series begin
+        #eco cond
+        linewidth := 2
+        linestyle := :dot
+        linecolor := :green
+        label := "Secondary Fluid Condenser"
+        (orcdata[:s_econ_cond], orcdata[:T_econ_cond])
+    end
+end
+
+export f_plot

@@ -6,6 +6,19 @@ This package aims to solve Heat Pump and ORC systems for given known temperature
 
 The thermodynamic computations use Clapeyron.jl. 
 
+# Installation
+For the latest release, first type `]` and then:
+
+```julia
+pkg> add ThermoCycleGlides
+```
+
+For the developer version type:
+
+```julia
+pkg> add https://github.com/Sush1090/ThermoCycleGlides.jl
+```
+
 # Usage
 Usage Heat Pump Example :
 
