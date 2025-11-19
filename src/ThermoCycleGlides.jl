@@ -37,8 +37,6 @@ include("Optimizations/Optimize.jl")
 include("Plots/cycleplots.jl")
 
 
-# PrecompileTools
-include("precompile.jl")
 
     function show(prob::ThermoCycleProblem)
         show_parameters(prob)
@@ -48,4 +46,6 @@ include("precompile.jl")
     end
 
     export show
+
+    export get_states
 end
