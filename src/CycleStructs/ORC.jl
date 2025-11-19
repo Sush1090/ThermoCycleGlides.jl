@@ -325,8 +325,8 @@ function F(prob::ORCEconomizer,x::AbstractVector{T};N::Int64) where {T<:Real}
         return F_pure(prob,x)
     end
     p_evap,p_cond = x .* 101325 # convert to Pa
-    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle))
-    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.orc.fluid,0.0, p_cond, prob.orc.z, RRQXFlash(equilibrium=:vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.orc.fluid,1.0, p_evap, prob.orc.z, RRQXFlash(equilibrium=:vle))
     T_sat_evap = Clapeyron.temperature(prob.orc.fluid, flash_res1_evap)
     T_sat_cond = Clapeyron.temperature(prob.orc.fluid, flash_res0_cond)
     T_evap_out = T_sat_evap + prob.orc.ΔT_sh
@@ -474,7 +474,6 @@ function get_states(prob::ORC,sol::SolutionState)
         :p_evap => p_evap,
         :p_cond => p_cond,
         :T_cond_out => T_cond_out,
-        :h_cond_out => h_cond_out,
         :h_cond_out => h_cond_out_spec,
         :s_cond_out => s_cond_out_spec,
         :T_pump_out => T_pump_out,
@@ -487,4 +486,71 @@ function get_states(prob::ORC,sol::SolutionState)
         :h_exp_out => h_exp_out_spec,
         :s_exp_out => s_exp_out_spec
     )
+end
+
+function get_states(prob::ORCEconomizer, sol::SolutionState)
+    p_evap,p_cond = sol.x .* 101325
+    mw_ = molecular_weight(prob.orc.fluid,prob.orc.z)
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.orc.fluid,0.0, p_cond, prob.orc.z, RRQXFlash(equilibrium=:vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.orc.fluid,1.0, p_evap, prob.orc.z, RRQXFlash(equilibrium=:vle))
+
+    T_evap_sat = Clapeyron.temperature(flash_res1_evap)
+    T_evap_out = T_evap_sat + prob.orc.ΔT_sh
+    h_evap_out = enthalpy(prob.orc.fluid,p_evap,T_evap_out,prob.orc.z)
+    h_evap_out_spec = h_evap_out./mw_
+    s_evap_out_spec = entropy(prob.orc.fluid,p_evap,T_evap_out,prob.orc.z)./mw_
+
+    h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.orc.η_expander, h_evap_out, prob.orc.z, prob.orc.fluid)
+    h_exp_out_spec = h_exp_out/mw_
+    T_exp_out = Clapeyron.PH.temperature(prob.orc.fluid, p_cond, h_exp_out, prob.orc.z)
+    s_exp_out_spec = entropy(prob.orc.fluid,p_cond,T_exp_out,prob.orc.z)./mw_
+
+    T_sat_cond = Clapeyron.temperature(prob.orc.fluid, flash_res0_cond)
+    T_cond_out = T_sat_cond - prob.orc.ΔT_sc
+    h_cond_out = Clapeyron.enthalpy(prob.orc.fluid, p_cond, T_cond_out, prob.orc.z)
+    h_cond_out_spec = h_cond_out/mw_
+    s_cond_out_spec = Clapeyron.entropy(prob.orc.fluid,p_cond,T_cond_out,prob.orc.z)/mw_
+
+    h_pump_in = h_cond_out
+    h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h_pump_in, prob.orc.z, prob.orc.fluid)
+    T_pump_out = Clapeyron.PH.temperature(prob.orc.fluid, p_evap, h_pump_out, prob.orc.z)
+    h_pump_out_spec = h_pump_out./mw_
+    s_pump_out_spec = entropy(prob.fluid,p_evap,T_pump_out,prob.z)./mw_
+
+    q_ihex = IHEX_Q(prob.orc.fluid, prob.ϵ,T_exp_out,p_cond,T_pump_out,p_evap,prob.orc.z)
+    
+    h_evap_in = h_pump_out + q_ihex
+    h_eco_out_pump_end_spec = h_evap_in/mw_
+    T_eco_out_pump_end = Clapeyron.PH.temperature(prob.orc.fluid,p_evap,h_evap_in,prob.orc.z)
+    s_eco_out_pump_end_spec = entropy(prob.orc.fluid,p_evap,T_eco_out_pump_end,prob.orc.z)./mw_
+
+    h_cond_in = h_exp_out - q_ihex
+    h_cond_in_spec = h_cond_in./mw_
+    T_cond_in = Clapeyron.PH.temperature(prob.orc.fluid,p_cond,h_cond_in,prob.orc.z)
+    s_cond_in_spec = entropy(prob.orc.fluid,p_cond,T_cond_in,prob.orc.z)./mw_
+
+    dict = Dict(
+        :p_evap => p_evap,
+        :p_cond => p_cond,
+        :T_evap_out => T_evap_out,
+        :h_evap_out => h_evap_out_spec,
+        :s_evap_out => s_evap_out_spec,
+        :T_exp_out => T_exp_out,
+        :h_exp_out => h_exp_out_spec,
+        :s_exp_out => s_exp_out_spec,
+        :T_cond_out => T_cond_out,
+        :h_cond_out => h_cond_out_spec,
+        :s_cond_out => s_cond_out_spec,
+        :T_pump_out => T_pump_out,
+        :h_pump_out => h_pump_out_spec,
+        :s_pump_out => s_pump_out_spec,
+        :T_eco_out_pump_end => T_eco_out_pump_end,
+        :h_eco_out_pump_end => h_eco_out_pump_end_spec,
+        :s_eco_out_pump_end => s_eco_out_pump_end_spec,
+        :T_eco_out_exp_end => T_cond_in,
+        :h_eco_out_exp_end => h_cond_in_spec,
+        :s_eco_out_exp_end => s_cond_in_spec
+
+    )
+    return dict
 end
