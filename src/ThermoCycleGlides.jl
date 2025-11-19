@@ -13,7 +13,6 @@ import Clapeyron: molecular_weight
 
 abstract type ThermoCycleProblem end
 
-abstract type ThermoCycleSolution end
 
 #NonlinearSolver - NR
 include("NonlinearSolver/newton-raphson.jl")
@@ -47,5 +46,5 @@ include("Plots/cycleplots.jl")
 
     export show
 
-    export get_states
+    export get_states, ThermoCycleProblem
 end
