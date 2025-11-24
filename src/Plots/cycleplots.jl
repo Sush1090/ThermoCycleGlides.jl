@@ -39,8 +39,10 @@ function plotting_data(prob::HeatPump,sol::SolutionState;N = 30,p_min = nothing)
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_comp_in = enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
     h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
-    h_comp_array = collect(range(h_comp_in, h_comp_out, length = N))
+
     p_comp_array = collect(range(p_evap, p_cond, length = N))
+    f_h(p_out) = isentropic_compressor(p_evap,p_out,prob.η_comp,h_comp_in,prob.z,prob.fluid)
+    h_comp_array = f_h.(p_comp_array)
     T_ph(p,h) = Clapeyron.PH.temperature(prob.fluid, p, h, prob.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
     s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.fluid, p, h, prob.z)
@@ -110,9 +112,11 @@ function plotting_data(prob::ORC,sol::SolutionState;N = 30,p_min = nothing)
 
     h_exp_in = h_evap_out
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
-    h_exp_array = collect(range(h_exp_in, h_exp_out, length = N))
+
     p_exp_array = collect(range(p_evap, p_cond, length = N))
-    T_exp_array = T_ph.(p_exp_array, h_exp_array)
+    f_h(p_out) = isentropic_expander(p_evap,p_out,prob.η_expander,h_exp_in,prob.z,prob.fluid)
+    h_exp_array = f_h.(p_exp_array)
+    T_exp_array = T_ph.(p_exp_array, h_exp_array) 
     s_exp_array = s_ph.(p_exp_array, h_exp_array)./molecular_weight(prob.fluid,prob.z)
 
 
@@ -159,8 +163,10 @@ function plotting_data(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min
 
     h_comp_in =  q_ihex + h_evap_out  #enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
     h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
-    h_comp_array = collect(range(h_comp_in, h_comp_out, length = N))
+
     p_comp_array = collect(range(p_evap, p_cond, length = N))
+    f_h(p_out) = isentropic_compressor(p_evap,p_out,prob.hp.η_comp,h_comp_in,prob.hp.z,prob.hp.fluid)
+    h_comp_array = f_h.(p_comp_array)
     T_ph(p,h) = Clapeyron.PH.temperature(prob.hp.fluid, p, h, prob.hp.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
     s_ph_vapour(p,h) = Clapeyron.PH.entropy(prob.hp.fluid, p, h, prob.hp.z)
@@ -250,8 +256,10 @@ function plotting_data(prob::ORCEconomizer,sol::SolutionState;N = 30, p_min = no
     h_evap_out = Clapeyron.enthalpy(prob.orc.fluid, p_evap, T_evap_out, prob.orc.z)
     h_exp_in = h_evap_out
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.orc.η_expander, h_exp_in, prob.orc.z, prob.orc.fluid)
-    h_exp_array = collect(range(h_exp_in, h_exp_out, length = N))
+
     p_exp_array = collect(range(p_evap, p_cond, length = N))
+    f_h(p_out) = isentropic_expander(p_evap,p_out,prob.orc.η_expander,h_exp_in,prob.orc.z,prob.orc.fluid)
+    h_exp_array = f_h.(p_exp_array)
     T_exp_array = T_ph.(p_exp_array, h_exp_array)
     s_exp_array = s_ph.(p_exp_array, h_exp_array)./molecular_weight(prob.orc.fluid,prob.orc.z)
 
@@ -503,7 +511,7 @@ end
         label := "Secondary Fluid Condenser"
         ylabel := "Temperature (K)"
         xlabel := "Specific Entropy (J/K/kg)"
-        title := "ORC Cycle on TS Diagram: $(prob.fluid.components)"
+        title := "$(prob.fluid.components)"
         (orcdata[:s_cond_array], orcdata[:T_cond_sf_array])
     end
     

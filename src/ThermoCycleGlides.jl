@@ -1,11 +1,11 @@
 module ThermoCycleGlides
 
 using Clapeyron, Polynomials, Interpolations, FiniteDifferences
-using ForwardDiff, LinearAlgebra
+using ForwardDiff#, LinearAlgebra
 using StaticArrays,Metaheuristics
 using RecipesBase
 
-import LinearAlgebra: norm, rank
+# import LinearAlgebra: norm, rank
 import Base: show, length, copy, similar, promote_type
 
 import Clapeyron: molecular_weight
