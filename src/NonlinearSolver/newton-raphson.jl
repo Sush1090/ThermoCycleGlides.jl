@@ -1,4 +1,8 @@
 
+function norm(x)
+    return sqrt(sum(x.^2))
+end
+
 
 """
 `SolutionState` -  A struct to hold the solution state of the nonlinear solver.
@@ -105,13 +109,13 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
             error("The jacobian has non-finite elements")
         end
            
-        if rank(jk) == n # Compute a Newton step
+        # if rank(jk) == n # Compute a Newton step
             xn .= xk - jk\f(xk)
-        else # Compute a Levenberg-Marquardt step
-            λ = 0.001*norm(f(xk))^2
+        # else # Compute a Levenberg-Marquardt step
+        #     λ = 0.001*norm(f(xk))^2
          
-            xn .= xk - (jk'jk + λ*I)\(jk'f(xk))
-        end
+        #     xn .= xk - (jk'jk + λ*I)\(jk'f(xk))
+        # end
         f_calls += 1 # for f(xk) call above
         box_projection!(xn,lb,ub)
 
