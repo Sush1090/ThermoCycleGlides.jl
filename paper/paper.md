@@ -46,6 +46,7 @@ ThermoCycleGlides.jl provides a computational framework for solving this nonline
 # Acknowledgement
 
 We are greatful to Andrés Riedemann for his contributions to Clapeyron.jl which has allowed the present implementations in this package. 
+We are also greatful to Maarten Vergote, Vincent Lemort, Arthur Adriaens,and Antoine Laterre.
 <!-- # Example
 
 ![hp_example](./images/joss_hp_diag.png) 
