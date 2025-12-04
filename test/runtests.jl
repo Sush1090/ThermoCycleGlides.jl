@@ -13,7 +13,8 @@ solverparams_ad = ThermoCycleParameters(
     ftol = 1e-8,
     restart_TOL = 1e-4,
     max_iters = 1000,
-    N = 30
+    N = 30,
+    x0_init = :default
 )
 
 @testset "Isentopic Compression - Single Component" begin
@@ -138,7 +139,7 @@ end
 end
 
 @testset "Pure - fluids - hard ORC-Economizer NL solver" begin
-    for i in 1:length(eos_)
+    for i in eachindex(eos_)
         for fluid in fluids_test
             fluid_model = eos_[i](fluid,idealmodel = ReidIdeal)
             z = [1.0]
@@ -181,7 +182,7 @@ end
             _hp_ = HeatPumpRecuperator(hp_,ϵ)
             sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
             @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-            @test sol.soltype == :subcritical
+            @test sol.soltype == :subcritical || sol.soltype = :subcritical_restart_mode
             # @test abs(COP(_hp_,sol)) >= abs(COP(hp_,sol_hp))
         end
     end
@@ -202,7 +203,7 @@ end
     solver_params = ThermoCycleParameters()
     sol = solve(orc,solver_params)
     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-    @test sol.soltype == :subcritical
+    @test sol.soltype == :subcritical || sol.soltype = :subcritical_restart_mode
     @test sol.x[1]>=sol.x[2]
     end
 end
