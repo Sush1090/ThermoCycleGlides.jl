@@ -2,7 +2,7 @@
 
 function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray, fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
     s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z,phase = :vapour)
-    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z,phase = :vapour)
+    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z)
     ha =  h_in + (h_isen - h_in) / η_isen
     #  T_out = Clapeyron.PH.temperature(fluid,p_out,ha,z)
     Tcrit,pcrit,_ = crit_mix(fluid,z)
@@ -10,7 +10,7 @@ function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Ab
         T_dew = dew_temperature(fluid,p_out,z)[1]
         h_dew = enthalpy(fluid,p_out,T_dew,z,phase=:vapour)
         if ha < h_dew
-        # @warn "Fixing outlet of compressor at saturation temperature"
+        @warn "Fixing outlet of compressor at saturation temperature"
             return enthalpy(fluid,p_out,T_dew,z,phase = :vapour)
         end
     end

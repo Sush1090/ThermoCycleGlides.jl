@@ -22,7 +22,7 @@ solverparams_ad = ThermoCycleParameters(
         for fluid in fluids_test
             fluid_model = eos_[i](fluid,idealmodel = ReidIdeal)
             z1 = [1.0]; p1 = 101325;
-            T1 = dew_temperature(fluid_model,p1,z1)[1] + 20;  p2 = 101325*2;
+            T1 = dew_temperature(fluid_model,p1,z1)[1] + 50;  p2 = 101325*2;
             h1 = enthalpy(fluid_model,p1,T1,z1);
             s1 = Clapeyron.entropy(fluid_model,p1,T1,z1)
             h2= ThermoCycleGlides.isentropic_compressor(p1,p2,1.0,h1,z1,fluid_model)
