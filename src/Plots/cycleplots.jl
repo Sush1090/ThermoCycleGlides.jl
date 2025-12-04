@@ -1,3 +1,22 @@
+function isentropic_compressor_plotter(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray, fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
+    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z,phase = :vapour)
+    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z,phase = :vapour)
+    ha =  h_in + (h_isen - h_in) / η_isen
+     T_out = Clapeyron.PH.temperature(fluid,p_out,ha,z)
+    Tcrit,pcrit,_ = crit_mix(fluid,z)
+    if p_out < pcrit
+        T_dew = dew_temperature(fluid,p_out,z)[1]
+        h_dew = enthalpy(fluid,p_out,T_dew,z,phase=:vapour)
+        if T_out < T_dew
+            @show T_dew,T_out
+            # @warn "Fixing outlet of compressor at saturation temperature"
+            return enthalpy(fluid,p_out,T_dew,z,phase = :vapour)
+        end
+    end
+
+    return ha
+end
+
 function plotting_data(fluid::EoSModel,z::AbstractVector;N = 30,p_min = nothing,nanfix = true)
     @assert length(fluid.components) == length(z) "Components and composition vector length mismatch"
     if isnothing(p_min)
@@ -38,10 +57,10 @@ function plotting_data(prob::HeatPump,sol::SolutionState;N = 30,p_min = nothing)
     p_evap , p_cond = sol.x .* 101325
     T_evap_out = dew_temperature(prob.fluid, p_evap, prob.z)[1] + prob.ΔT_sh
     h_comp_in = enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
-    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
+    h_comp_out = ThermoCycleGlides.isentropic_compressor_plotter(p_evap, p_cond, prob.η_comp, h_comp_in, prob.z, prob.fluid)
 
     p_comp_array = collect(range(p_evap, p_cond, length = N))
-    f_h(p_out) = isentropic_compressor(p_evap,p_out,prob.η_comp,h_comp_in,prob.z,prob.fluid)
+    f_h(p_out) = isentropic_compressor_plotter(p_evap,p_out,prob.η_comp,h_comp_in,prob.z,prob.fluid)
     h_comp_array = f_h.(p_comp_array)
     T_ph(p,h) = Clapeyron.PH.temperature(prob.fluid, p, h, prob.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
@@ -162,10 +181,10 @@ function plotting_data(prob::HeatPumpRecuperator,sol::SolutionState;N = 30,p_min
 
 
     h_comp_in =  q_ihex + h_evap_out  #enthalpy(prob.fluid, p_evap, T_evap_out,prob.z, phase = :vapor)
-    h_comp_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
+    h_comp_out = ThermoCycleGlides.isentropic_compressor_plotter(p_evap, p_cond, prob.hp.η_comp, h_comp_in, prob.hp.z, prob.hp.fluid)
 
     p_comp_array = collect(range(p_evap, p_cond, length = N))
-    f_h(p_out) = isentropic_compressor(p_evap,p_out,prob.hp.η_comp,h_comp_in,prob.hp.z,prob.hp.fluid)
+    f_h(p_out) = isentropic_compressor_plotter(p_evap,p_out,prob.hp.η_comp,h_comp_in,prob.hp.z,prob.hp.fluid)
     h_comp_array = f_h.(p_comp_array)
     T_ph(p,h) = Clapeyron.PH.temperature(prob.hp.fluid, p, h, prob.hp.z)
     T_comp_array = T_ph.(p_comp_array, h_comp_array)
