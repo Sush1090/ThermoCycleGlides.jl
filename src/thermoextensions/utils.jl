@@ -1,8 +1,8 @@
 
 
 function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray, fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
-    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z)
-    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z)
+    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z,phase = :vapour)
+    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z,phase = :vapour)
     ha =  h_in + (h_isen - h_in) / η_isen
     #  T_out = Clapeyron.PH.temperature(fluid,p_out,ha,z)
     Tcrit,pcrit,_ = crit_mix(fluid,z)
