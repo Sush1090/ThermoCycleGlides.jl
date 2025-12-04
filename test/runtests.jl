@@ -182,7 +182,7 @@ end
             _hp_ = HeatPumpRecuperator(hp_,ϵ)
             sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
             @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-            @test sol.soltype == :subcritical || sol.soltype = :subcritical_restart_mode
+            @test sol.soltype == :subcritical 
             # @test abs(COP(_hp_,sol)) >= abs(COP(hp_,sol_hp))
         end
     end
@@ -203,7 +203,7 @@ end
     solver_params = ThermoCycleParameters()
     sol = solve(orc,solver_params)
     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-    @test sol.soltype == :subcritical || sol.soltype = :subcritical_restart_mode
+    @test sol.soltype == :subcritical 
     @test sol.x[1]>=sol.x[2]
     end
 end
