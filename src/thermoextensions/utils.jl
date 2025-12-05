@@ -1,9 +1,14 @@
 
 
 function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray, fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
-    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z)
-    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z)
-    ha =  h_in + (h_isen - h_in) / η_isen
+    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z,phase = :vapour)
+    # T_in = Tproperty(fluid,p_in,h_in,z,enthalpy,phase = :vapour)
+    T_isen_out = Tproperty(fluid,p_out,s_isen,z,entropy,phase = :vapour)
+    h_isen = enthalpy(fluid,p_out,T_isen_out,z,phase = :vapour)
+
+    # h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z)
+
+    ha =  h_in + ((h_isen - h_in)/η_isen)
     #  T_out = Clapeyron.PH.temperature(fluid,p_out,ha,z)
     Tcrit,pcrit,_ = crit_mix(fluid,z)
     if p_out < pcrit
@@ -19,14 +24,16 @@ function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Ab
 end
 
 function isentropic_pump(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray, fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
-    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z)
-    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen, z)
+    s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z,phase = :liquid)
+    T_isen_out = Tproperty(fluid,p_out,s_isen,z,entropy,phase = :liquid)
+    h_isen = enthalpy(fluid,p_out,T_isen_out,z,phase = :liquid)
     return h_in + (h_isen - h_in) / η_isen
 end
 
 function isentropic_expander(p_in::T1,p_out::T2,η_isen::T3,h_in::T4,z::AbstractVector,fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
     s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in,z) 
-    h_isen = Clapeyron.PS.enthalpy(fluid, p_out, s_isen,z)
+    T_isen_out = Tproperty(fluid,p_out,s_isen,z,entropy,phase = :vapour)
+    h_isen = enthalpy(fluid,p_out,T_isen_out,z,phase = :vapour)
     h_out = h_in - (h_in - h_isen) * η_isen
     # force outlet to be gaseous 
     dt = Clapeyron.dew_temperature(fluid, p_out, z)[1]

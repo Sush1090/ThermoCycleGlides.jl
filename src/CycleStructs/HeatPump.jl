@@ -45,7 +45,10 @@ function HeatPump(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in,T_cond_out,Î
 
     # Thermodynamic assertions
     # For heat-pump the inlet temperature of the condensor should be higher than outlet temperature of the evaporator
-    @assert T_cond_in > T_evap_out "Condenser inlet temperature must be higher than evaporator outlet temperature for the heat pump to function properly"
+    if  T_cond_in < T_evap_out
+        @warn  "Condenser inlet temperature must be higher than evaporator outlet temperature for the heat pump to function properly. Fixing the evap outlet to condensor inlet"
+        T_evap_out = T_cond_in
+    end
     # inlet temperature of the condensor should be subcritical - pinch point
     Tcrit,_,_ = crit_mix(fluid,z)
     @assert T_cond_in < Tcrit - pp_cond "Condenser inlet temperature must be less than critical temperature ($Tcrit) minus pinch point ($pp_cond) for the heat pump to function properly"

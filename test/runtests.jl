@@ -13,7 +13,8 @@ solverparams_ad = ThermoCycleParameters(
     ftol = 1e-8,
     restart_TOL = 1e-4,
     max_iters = 1000,
-    N = 30
+    N = 30,
+    x0_init = :default
 )
 
 @testset "Isentopic Compression - Single Component" begin
@@ -21,7 +22,7 @@ solverparams_ad = ThermoCycleParameters(
         for fluid in fluids_test
             fluid_model = eos_[i](fluid,idealmodel = ReidIdeal)
             z1 = [1.0]; p1 = 101325;
-            T1 = dew_temperature(fluid_model,p1,z1)[1] + 20;  p2 = 101325*2;
+            T1 = dew_temperature(fluid_model,p1,z1)[1] + 50;  p2 = 101325*2;
             h1 = enthalpy(fluid_model,p1,T1,z1);
             s1 = Clapeyron.entropy(fluid_model,p1,T1,z1)
             h2= ThermoCycleGlides.isentropic_compressor(p1,p2,1.0,h1,z1,fluid_model)
@@ -138,7 +139,7 @@ end
 end
 
 @testset "Pure - fluids - hard ORC-Economizer NL solver" begin
-    for i in 1:length(eos_)
+    for i in eachindex(eos_)
         for fluid in fluids_test
             fluid_model = eos_[i](fluid,idealmodel = ReidIdeal)
             z = [1.0]
@@ -181,7 +182,7 @@ end
             _hp_ = HeatPumpRecuperator(hp_,ϵ)
             sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
             @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-            @test sol.soltype == :subcritical
+            @test sol.soltype == :subcritical 
             # @test abs(COP(_hp_,sol)) >= abs(COP(hp_,sol_hp))
         end
     end
@@ -202,7 +203,7 @@ end
     solver_params = ThermoCycleParameters()
     sol = solve(orc,solver_params)
     @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
-    @test sol.soltype == :subcritical
+    @test sol.soltype == :subcritical 
     @test sol.x[1]>=sol.x[2]
     end
 end
