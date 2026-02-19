@@ -14,6 +14,9 @@ import Clapeyron: molecular_weight
 abstract type ThermoCycleProblem end
 
 
+#Data map file
+include("DataMap/DataMap.jl")
+
 #NonlinearSolver - NR
 include("NonlinearSolver/newton-raphson.jl")
 
