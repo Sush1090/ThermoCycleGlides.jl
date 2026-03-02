@@ -554,3 +554,130 @@ function get_states(prob::ORCEconomizer, sol::SolutionState)
     )
     return dict
 end
+
+
+mutable struct ORCVarEff{F<:Function,T<:Real} <: ThermoCycleProblem
+    fluid::EoSModel
+    z::AbstractVector{T}
+    T_evap_in::T
+    T_evap_out::T
+    ΔT_sh::T
+    T_cond_in::T
+    T_cond_out::T
+    ΔT_sc::T
+    η_pump::T
+    η_expander::F
+    pp_evap::T
+    pp_cond::T
+end
+
+
+function ORCVarEff(;
+    fluid::EoSModel,
+    z,
+    T_evap_in,
+    T_evap_out,
+    T_cond_in,
+    T_cond_out,
+    η_pump,
+    η_expander::F,
+    pp_evap,
+    pp_cond,
+    ΔT_sh,
+    ΔT_sc
+    ) where {F<:Function}
+
+    @assert fluid isa CubicModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for ORC cycles."
+
+    # Composition checks
+    @assert length(z) > 0 "Composition vector z must not be empty"
+    @assert length(fluid.components) == length(z) "Composition vector z must match number of fluid components"
+
+    # Secondary fluid temperature logic
+    @assert T_evap_in > T_evap_out "Evaporator secondary fluid must cool down (T_evap_in > T_evap_out)"
+    @assert T_cond_out > T_cond_in "Condenser secondary fluid must heat up (T_cond_out > T_cond_in)"
+
+    # ORC thermodynamic requirement
+    @assert T_evap_out > T_cond_in "Evaporation temperature must exceed condensation temperature"
+
+    # Efficiencies
+    @assert 0 < η_pump ≤ 1 "Pump efficiency must be in (0, 1]"
+
+    # Very light sanity check on expander efficiency function
+    @assert applicable(η_expander, T_evap_out, T_cond_in) ||
+            applicable(η_expander, T_evap_out) ||
+            applicable(η_expander) "η_expander must be a callable function"
+
+    # Pinch points
+    @assert pp_evap > 0 "Evaporator pinch point must be positive"
+    @assert pp_cond > 0 "Condenser pinch point must be positive"
+
+    # Superheating / subcooling
+    @assert ΔT_sh ≥ 0 "Superheating must be non-negative"
+    @assert ΔT_sc ≥ 0 "Subcooling must be non-negative"
+
+    # Optional subcritical evaporation check (kept soft, like your HP logic)
+    # Tcrit, _, _ = crit_mix(fluid, z)
+    # @assert T_evap_out < Tcrit - pp_evap "Evaporator outlet must be below critical temperature minus pinch"
+
+    # Type promotion
+    type_promoted = promote_type(
+        eltype(z),
+        typeof(T_evap_in),
+        typeof(T_evap_out),
+        typeof(T_cond_in),
+        typeof(T_cond_out),
+        typeof(η_pump),
+        typeof(pp_evap),
+        typeof(pp_cond),
+        typeof(ΔT_sh),
+        typeof(ΔT_sc)
+    )
+
+    z_T          = convert(Vector{type_promoted}, z)
+    T_evap_in_T  = convert(type_promoted, T_evap_in)
+    T_evap_out_T = convert(type_promoted, T_evap_out)
+    T_cond_in_T  = convert(type_promoted, T_cond_in)
+    T_cond_out_T = convert(type_promoted, T_cond_out)
+    η_pump_T     = convert(type_promoted, η_pump)
+    pp_evap_T    = convert(type_promoted, pp_evap)
+    pp_cond_T    = convert(type_promoted, pp_cond)
+    ΔT_sh_T      = convert(type_promoted, ΔT_sh)
+    ΔT_sc_T      = convert(type_promoted, ΔT_sc)
+
+    return ORCVarEff{F,type_promoted}(
+        fluid,
+        z_T,
+        T_evap_in_T,
+        T_evap_out_T,
+        ΔT_sh_T,
+        T_cond_in_T,
+        T_cond_out_T,
+        ΔT_sc_T,
+        η_pump_T,
+        η_expander,
+        pp_evap_T,
+        pp_cond_T
+    )
+end
+
+
+
+function F(prob::ORCVarEff,x::AbstractVector;N::Int)
+    η_exp_orc = prob.η_expander(x[1]/x[2])
+    orc = ORC(
+        fluid = prob.fluid,
+        z = prob.z,
+        T_evap_in = prob.T_evap_in,
+        T_evap_out = prob.T_evap_out,
+        ΔT_sh = prob.ΔT_sh,
+        T_cond_in = prob.T_cond_in,
+        T_cond_out = prob.T_cond_out,
+        ΔT_sc = prob.ΔT_sc,
+        η_pump = prob.η_pump,
+        η_expander = η_exp_orc,
+        pp_evap = prob.pp_evap,
+        pp_cond = prob.pp_cond
+    )
+    return F(orc,x;N=N)
+end
