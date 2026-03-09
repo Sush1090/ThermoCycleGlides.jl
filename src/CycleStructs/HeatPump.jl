@@ -754,8 +754,10 @@ function F_pure(prob::HeatPumpVarEff,x::AbstractVector{T}) where {T<:Real}
 end
 
 function F(prob::HeatPumpVarEff,x::AbstractVector{T};N::Int) where {T<:Real}
-    return F_pure(prob,x)
-        p_evap = x[1] * 101_325
+   if length(prob.fluid.components) == 1
+        return F_pure(prob,x)
+   end
+    p_evap = x[1] * 101_325
     p_cond = x[2] * 101_325
     η_val = prob.η_comp(p_cond/p_evap)
     flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle)) 
@@ -844,3 +846,22 @@ function COP(prob::HeatPumpVarEff,sol::SolutionState)
 end
 
 export HeatPump_from_VarHeatPump, get_states
+
+"""
+`VHC(prob::HeatPump,sol::SolutionState)`
+
+Returns the volumetric heating capacity [kJ/m³]
+"""
+function VHC(prob::HeatPump,sol::SolutionState)
+    p_evap,p_cond = sol.x .*101325
+    T_in = Clapeyron.dew_temperature(prob.fluid,p_evap,prob.z)[1] + prob.ΔT_sh
+    h_in = enthalpy(prob.fluid, p_evap,T_in,prob.z)
+    h_out = ThermoCycleGlides.isentropic_compressor(p_evap, p_cond, prob.η_comp, h_in, prob.z, prob.fluid)
+    h_out_spec = h_out/molecular_weight(prob.fluid,prob.z)
+    h_in_spec = h_in/molecular_weight(prob.fluid,prob.z)
+    ρ_in = mass_density(prob.fluid,p_evap,T_in,prob.z)
+    return ρ_in*(h_out_spec - h_in_spec)/1000
+end
+
+export VHC
+

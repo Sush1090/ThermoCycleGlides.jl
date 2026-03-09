@@ -15,7 +15,7 @@ RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-Clapeyron = "0.6.19,0.6.19" 
+Clapeyron = "0.6.21"
 FiniteDifferences = "0.12.32"
 ForwardDiff = "0.10,1"
 Interpolations = "0.16.1"
