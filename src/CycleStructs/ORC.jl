@@ -39,7 +39,7 @@ end
 function ORC(; fluid::EoSModel, z, T_evap_in, T_evap_out, T_cond_in, T_cond_out,
              η_pump, η_expander, pp_evap, pp_cond, ΔT_sh, ΔT_sc)
 
-    @assert fluid isa CubicModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for Heat Pump cycles."
+    @assert fluid isa CubicModel || fluid isa SingleFluid || fluid isa MultiFluid "The type of EOS provided is not supported as of now."
 
     @assert length(z) > 0 "Composition vector z must not be empty"
     @assert length(fluid.components) == length(z) "Composition vector z must match number of fluid components"
@@ -587,7 +587,7 @@ function ORCVarEff(;
     ΔT_sc
     ) where {F<:Function}
 
-    @assert fluid isa CubicModel || fluid isa SingleFluid "Currently only Cubic EoS models are supported for ORC cycles."
+    @assert fluid isa CubicModel || fluid isa SingleFluid || fluid isa MultiFluid "The type of EOS provided is not supported as of now."
 
     # Composition checks
     @assert length(z) > 0 "Composition vector z must not be empty"
