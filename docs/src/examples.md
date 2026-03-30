@@ -161,3 +161,9 @@ plot(fluid::EoSModel,z::AbstractVector,kwargs...)
 2. For now the solver is stable for sub-critical parameters. So if incase the solver does not converge please check if the parameters provided allow the solution to be subcritical. 
 3. For mixtures, it is recommended to use parameters sufficently below the critical point as sometimes near crictical zone the computation of dew and bubble points can fail.   
 4. If for solving with `autodiff = true`, the first run will have significant compilation time. The subsequent runs will be faster.
+
+
+# Data Based Models
+In-case manufacturer data of compressor and exapander is avaiable as a relation of pressure ratio to isentropic efficiency, we can wrap the above solver with a fit of the data. 
+
+## Heat Pump Example
