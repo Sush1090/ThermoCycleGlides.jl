@@ -51,7 +51,12 @@ function ORC(; fluid::EoSModel, z, T_evap_in, T_evap_out, T_cond_in, T_cond_out,
     @assert T_cond_out > T_cond_in "Condenser secondary fluid must heat up (T_cond_out > T_cond_in)"
 
     # ORC thermodynamic requirement
-    @assert T_evap_out > T_cond_in "Working fluid evaporation temperature must exceed condensation temperature"
+    if T_evap_out <= T_cond_in
+        @warn "Evaporator outlet temperature is below or equal to condenser inlet temperature. 
+        This may lead to a non-functional cycle. Hence the condesner inlet temperature is set equal to the evaporator outlet temperature."
+        T_cond_in = T_evap_out
+    end
+    @assert T_evap_out >= T_cond_in "Working fluid evaporation temperature must exceed condensation temperature"
 
     # Efficiency assertions
     @assert 0 < η_pump <= 1 "Pump efficiency must be in (0, 1]"
