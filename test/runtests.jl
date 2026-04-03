@@ -17,6 +17,16 @@ solverparams_ad = ThermoCycleParameters(
     x0_init = :default
 )
 
+solverparams_fd = ThermoCycleParameters(
+    autodiff = false,
+    xtol = 1e-8,
+    ftol = 1e-8,
+    restart_TOL = 1e-4,
+    max_iters = 1000,
+    N = 30,
+    x0_init = :default
+)
+
 @testset "Isentopic Compression - Single Component" begin
    for i in eachindex(eos_)
         for fluid in fluids_test
@@ -178,9 +188,9 @@ end
             ΔT_sh = 5.0 
             hp_ = HeatPump(fluid=fluid_model, z=z, T_evap_in=310, T_evap_out=T_evap_out, T_cond_in=340, T_cond_out=355, η_comp=0.75, pp_evap=2, pp_cond=2, ΔT_sc=2.0, ΔT_sh=ΔT_sh)
             ϵ = 0.4
-            sol_hp = solve(hp_,solverparams_ad)
+            sol_hp = solve(hp_,solverparams_fd)
             _hp_ = HeatPumpRecuperator(hp_,ϵ)
-            sol = solve(_hp_,N = 30,autodiff = true,ftol = 1e-8,xtol = 1e-8)
+            sol = solve(_hp_,solverparams_fd)
             @test ThermoCycleGlides.norm(sol.residuals) < 1e-3
             @test sol.soltype == :subcritical 
             # @test abs(COP(_hp_,sol)) >= abs(COP(hp_,sol_hp))
