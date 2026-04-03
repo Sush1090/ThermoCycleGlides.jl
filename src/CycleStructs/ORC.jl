@@ -150,41 +150,77 @@ end
 export ORC, η
 
 
-function F(prob::ORC,x::AbstractVector{T};N::Int64) where {T<:Real}
+function F(prob::ORC, x::AbstractVector{T}; N::Int64) where {T<:Real}
     @assert length(x) == 2 "x must be a vector of length 2"
+
     if length(prob.fluid.components) == 1
-        return F_pure(prob,x)
+        return F_pure(prob, x)
     end
     
-    p_evap,p_cond = x .* 101325 # convert to Pa
+    p_evap, p_cond = x .* 101325 # convert to Pa
     
-    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid,0.0, p_cond, prob.z, RRQXFlash(equilibrium=:vle))
-    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid,1.0, p_evap, prob.z, RRQXFlash(equilibrium=:vle))
+    flash_res0_cond = Clapeyron.qp_flash_impl(prob.fluid, 0.0, p_cond, prob.z, RRQXFlash(equilibrium = :vle))
+    flash_res1_evap = Clapeyron.qp_flash_impl(prob.fluid, 1.0, p_evap, prob.z, RRQXFlash(equilibrium = :vle))
 
     T_evap_out = Clapeyron.temperature(prob.fluid, flash_res1_evap) + prob.ΔT_sh
-    # @show T_evap_out
     h_evap_out = Clapeyron.enthalpy(prob.fluid, p_evap, T_evap_out, prob.z)
 
-    h_exp_in = h_evap_out;
+    h_exp_in  = h_evap_out
     h_exp_out = ThermoCycleGlides.isentropic_expander(p_evap, p_cond, prob.η_expander, h_exp_in, prob.z, prob.fluid)
-    h_cond_in = h_exp_out
+
+    h_cond_in  = h_exp_out
     T_cond_out = Clapeyron.temperature(prob.fluid, flash_res0_cond) - prob.ΔT_sc
     h_cond_out = Clapeyron.enthalpy(prob.fluid, p_cond, T_cond_out, prob.z)
-    h_cond_array = collect(range(h_cond_out, h_cond_in, length=N))
-    T_cond(h) = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
-    T_cond_array = T_cond.(h_cond_array)
-    # fix_nan!(T_cond_array)
-    T_cond_sf_array = collect(range(prob.T_cond_in, prob.T_cond_out, length=N))
-    ΔTpp_cond = minimum(T_cond_array .- T_cond_sf_array) - prob.pp_cond
-    h_pump_in = h_cond_out
+
+    # -------------------------
+    # Condenser pinch (NaN-safe)
+    # -------------------------
+    ΔTpp_cond = begin
+        Δmin = typemax(T)
+        for i in 0:N-1
+            α = i / (N-1)
+
+            h = (1-α) * h_cond_out + α * h_cond_in
+            T_hx = Clapeyron.PH.temperature(prob.fluid, p_cond, h, prob.z)
+            T_sf = (1-α) * prob.T_cond_in + α * prob.T_cond_out
+
+            if !isnan(T_hx)
+                Δ = T_hx - T_sf
+                if Δ < Δmin
+                    Δmin = Δ
+                end
+            end
+        end
+        Δmin - prob.pp_cond
+    end
+
+    # Pump
+    h_pump_in  = h_cond_out
     h_pump_out = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.η_pump, h_pump_in, prob.z, prob.fluid)
-    h_evap_array = collect(range(h_pump_out, h_evap_out, length=N))
-    T_evap(h) = Clapeyron.PH.temperature(prob.fluid, p_evap, h, prob.z)
-    T_evap_array = T_evap.(h_evap_array)
-    # fix_nan!(T_evap_array)
-    T_evap_sf_array = collect(range(prob.T_evap_out, prob.T_evap_in, length=N))
-    ΔTpp_evap = minimum(T_evap_sf_array .- T_evap_array) - prob.pp_evap
-    return [ΔTpp_evap, ΔTpp_cond]#, T_cond_array, T_evap_array, T_cond_sf_array, T_evap_sf_array
+
+    # -------------------------
+    # Evaporator pinch (NaN-safe)
+    # -------------------------
+    ΔTpp_evap = begin
+        Δmin = typemax(T)
+        for i in 0:N-1
+            α = i / (N-1)
+
+            h = (1-α) * h_pump_out + α * h_evap_out
+            T_hx = Clapeyron.PH.temperature(prob.fluid, p_evap, h, prob.z)
+            T_sf = (1-α) * prob.T_evap_out + α * prob.T_evap_in
+
+            if !isnan(T_hx)
+                Δ = T_sf - T_hx
+                if Δ < Δmin
+                    Δmin = Δ
+                end
+            end
+        end
+        Δmin - prob.pp_evap
+    end
+
+    return [ΔTpp_evap, ΔTpp_cond]
 end
 
 
