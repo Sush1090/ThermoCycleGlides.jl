@@ -211,6 +211,7 @@ mutable struct ThermoCycleParameters
     restart_TOL::Real
     max_iters::Int
     x0_init::Symbol
+    verbose::Bool
 end
 
 function ThermoCycleParameters(; 
@@ -222,14 +223,15 @@ function ThermoCycleParameters(;
     ftol::Real = 1e-6,
     restart_TOL::Real = 1e-3,
     max_iters::Int = 100,
-    x0_init::Symbol = :default
+    x0_init::Symbol = :default,
+    verbose::Bool = false
 )
     N > 0 || error("N must be positive")
     if !autodiff && fd_order < 2
         error("If autodiff is false, fd_order must be ≥ 2 (higher-order finite differences required).")
     end
     @assert x0_init == :default || x0_init == :average "x0 initizer has two versions :default and :average" 
-    return ThermoCycleParameters(N, autodiff, internal_pinch, fd_order, xtol, ftol, restart_TOL, max_iters,x0_init)
+    return ThermoCycleParameters(N, autodiff, internal_pinch, fd_order, xtol, ftol, restart_TOL, max_iters,x0_init, verbose)
 end
 
 
@@ -242,11 +244,11 @@ function switch_x0(x0_init::Symbol)
     end
 end
 
-function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000,x0_init::Symbol = :default)
+function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-8,ftol = 1e-8,max_iter= 1000,x0_init::Symbol = :default,verbose::Bool = false)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     T = promote_type(typeof(lb), typeof(ub))
     x0 = generate_initial_point(prob,lb,ub,x0_init)
-    sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter)
+    sol = constrained_newton_ad(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,verbose = verbose)
     sol.soltype = :subcritical
     if norm(sol.residuals)  > restart_TOL
         # f(x::AbstractVector{T}) where {T<:Real} = F_transcritical(prob, x,N = N)
@@ -261,10 +263,10 @@ function solve_ad(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector
     return sol
 end
 
-function solve_fd(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,fd_order = 2,xtol = 1e-8,ftol = 1e-8,max_iter= 1000,x0_init::Symbol = :default)
+function solve_fd(prob::ThermoCycleProblem,lb::AbstractVector,ub::AbstractVector;N::Int64 = 20,restart_TOL = 1e-3,fd_order = 2,xtol = 1e-8,ftol = 1e-8,max_iter= 1000,x0_init::Symbol = :default,verbose::Bool = false)
     f(x::AbstractVector{T}) where {T<:Real} = F(prob, x,N = N)
     x0 = generate_initial_point(prob,lb,ub,x0_init) 
-    sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order)
+    sol = constrained_newton_fd(f, x0, lb, ub; xtol = xtol, ftol = ftol, iterations = max_iter,fd_order = fd_order,verbose = verbose)
     sol.soltype = :subcritical
     if norm(sol.residuals) > restart_TOL
         x0_init = switch_x0(x0_init)
@@ -281,12 +283,12 @@ Solves for pressure values in HP and ORC cycles for the given glide and problem 
 Define those problems in the respective structs. 
 For now the default box-nonlinear solver is newton-raphson, but this can be changed to other solvers in the future.
 """
-function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-6,ftol = 1e-6,max_iter= 1000,x0_init::Symbol=:default)
+function solve(prob::ThermoCycleProblem;autodiff::Bool = true, fd_order =2 , N::Int64 = 20,restart_TOL = 1e-3,xtol = 1e-6,ftol = 1e-6,max_iter= 1000,x0_init::Symbol=:default,verbose::Bool = false)
     lb,ub = generate_box_solve_bounds(prob)
     if autodiff
-        return sol = solve_ad(prob, lb, ub, N = N, restart_TOL = restart_TOL, xtol = xtol, ftol = ftol, max_iter = max_iter,x0_init=x0_init)
+        return sol = solve_ad(prob, lb, ub, N = N, restart_TOL = restart_TOL, xtol = xtol, ftol = ftol, max_iter = max_iter,x0_init=x0_init,verbose=verbose)
     else
-        return sol = solve_fd(prob, lb, ub, N = N,fd_order = fd_order,restart_TOL = restart_TOL, xtol = xtol, ftol = ftol, max_iter = max_iter,x0_init = x0_init) 
+        return sol = solve_fd(prob, lb, ub, N = N,fd_order = fd_order,restart_TOL = restart_TOL, xtol = xtol, ftol = ftol, max_iter = max_iter,x0_init = x0_init,verbose=verbose) 
     end
 end
 
@@ -297,7 +299,7 @@ For now the default box-nonlinear solver is newton-raphson, but this can be chan
 """
 function solve(prob::ThermoCycleProblem,param::ThermoCycleParameters)
     return solve(prob,autodiff = param.autodiff,fd_order=param.fd_order,restart_TOL = param.restart_TOL,N = param.N,xtol = param.xtol,
-    ftol = param.ftol,max_iter= param.max_iters,x0_init = param.x0_init)
+    ftol = param.ftol,max_iter= param.max_iters,x0_init = param.x0_init,verbose = param.verbose)
 end
 
 export solve, ThermoCycleParameters
@@ -313,6 +315,7 @@ function show(io::IO,params::ThermoCycleParameters)
     println(io, "  restart_TOL     = ", params.restart_TOL)
     println(io, "  max_iters       = ", params.max_iters)
     println(io, "  x0_init         = ", params.x0_init)
+    println(io, "  verbose         = ", params.verbose)
 end
 
 

@@ -4,6 +4,10 @@ function norm(x)
 end
 
 
+function constrained_newton_verbose_step(xn,fxn,iter,lenx,lenf)
+    @info "Iteration: $iter, x: $xn, f(x): $fxn, lenx: $lenx, lenf: $lenf"
+end
+
 """
 `SolutionState` -  A struct to hold the solution state of the nonlinear solver.
 
@@ -86,7 +90,7 @@ end
 
 function constrained_newton_fd(f::Function,x::Array{T,1},
     lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-16,ftol::TOL=1e-16,iterations::S=100,
-    fd_order::M = 2) where  {T <: Real, S <: Integer, TT <: Real, TTT <: Real, M <: Int,TOL<:Real}
+    fd_order::M = 2,verbose::Bool=false) where  {T <: Real, S <: Integer, TT <: Real, TTT <: Real, M <: Int,TOL<:Real}
 
     fd_method  = central_fdm(fd_order,1)
 
@@ -128,14 +132,16 @@ function constrained_newton_fd(f::Function,x::Array{T,1},
         if iter_ >= iterations || (lenx <= xtol || lenf <= ftol)
             break
         end
-  
+        if verbose
+            constrained_newton_verbose_step(xn, f(xn), iter_, lenx, lenf)
+        end
     end
   
     return SolutionState(xn,f_calls,iter_,f(xn),lb,ub,false,fd_order,lenx,lenf,:unknown)
 end
 
 function constrained_newton_ad(f::Function,x::Array{T,1},
-    lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-16,ftol::TOL=1e-16,iterations::S=100) where 
+    lb::Array{TT,1},ub::Array{TTT,1};xtol::TOL=1e-16,ftol::TOL=1e-16,iterations::S=100,verbose::Bool=false) where 
     {T <: Real, S <: Integer, TT <: Real, TTT <: Real,TOL<:Real}
 
     type_promoted = promote_type(eltype(x), eltype(lb), eltype(ub))
@@ -167,9 +173,15 @@ function constrained_newton_ad(f::Function,x::Array{T,1},
         end
 
         xk = xn
+        if verbose
+            constrained_newton_verbose_step(xn, fx, iter_, length(x), length(fx))
+        end
     end
 
     return SolutionState(xn,f_calls,iter_,f(xn),lb,ub,true,0,lenx,lenf,:unknown)
 end
+
+
+
 
 export SolutionState
