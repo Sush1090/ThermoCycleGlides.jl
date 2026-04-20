@@ -63,3 +63,22 @@ function glide_match_coeff(prob::ThermoCycleGlides.ThermoCycleProblem,sol::Solut
 end
 
 
+function compute_isentropic_exponent(fluid::EoSModel,p,T,z)
+    Cp = isobaric_heat_capacity(fluid,p,T,z)
+    Cv = isochoric_heat_capacity(fluid,p,T,z)
+    return Cp/Cv
+end
+
+"""
+https://data.dtu.dk/articles/dataset/Numerical_models_for_the_design_and_analysis_of_heat_pumps_with_zeotropic_mixtures/6825443?file=13709117
+"""
+function off_design_compressor_relation(fluid::EoSModel,z,η_isen_design,built_in_volume_ratio;p_ref = 101325.0, T_ref = 300)
+    @assert dew_temperature(fluid,p_ref,z)[1] ≤ T_ref "Reference state should be gas. Change p_ref or T_ref" 
+    κ = compute_isentropic_exponent(fluid,p_ref,T_ref,z)
+    πi = built_in_volume_ratio^κ
+    γ = (κ - 1)/κ
+    f(x) = η_isen_design*((x)^(γ) - 1)/(πi^γ - (γ*πi^(-1/κ))*(πi - x) - 1)
+    return f
+end
+
+export off_design_compressor_relation, compute_isentropic_exponent
