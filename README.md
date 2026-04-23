@@ -16,7 +16,7 @@ pkg> add ThermoCycleGlides
 For the developer version type:
 
 ```julia
-pkg> add https://github.com/Sush1090/ThermoCycleGlides.jl
+pkg> add https://github.com/ClapeyronThermo/ThermoCycleGlides.jl
 ```
 
 # Usage
