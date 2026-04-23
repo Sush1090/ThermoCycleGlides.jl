@@ -1,6 +1,6 @@
 module ThermoCycleGlides
 
-using Clapeyron, Polynomials, Interpolations, FiniteDifferences
+using Clapeyron, Polynomials, Interpolations, FiniteDifferences, Optim
 using ForwardDiff#, LinearAlgebra
 using StaticArrays,Metaheuristics
 using RecipesBase
@@ -14,8 +14,7 @@ import Clapeyron: molecular_weight
 abstract type ThermoCycleProblem end
 
 
-#Data map file
-include("DataMap/DataMap.jl")
+
 
 #NonlinearSolver - NR
 include("NonlinearSolver/newton-raphson.jl")
@@ -23,6 +22,9 @@ include("NonlinearSolver/newton-raphson.jl")
 # Thermo-fixes
 include("thermoextensions/utils.jl")
 include("thermoextensions/fix_instabilites.jl")
+
+#Data map file
+include("DataMap/DataMap.jl")
 
 # Cycle Structs
 include("CycleStructs/ORC.jl")
