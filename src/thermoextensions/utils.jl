@@ -73,6 +73,7 @@ end
 https://data.dtu.dk/articles/dataset/Numerical_models_for_the_design_and_analysis_of_heat_pumps_with_zeotropic_mixtures/6825443?file=13709117
 """
 function off_design_compressor_relation(fluid::EoSModel,z,η_isen_design,built_in_volume_ratio;p_ref = 101325.0, T_ref = 300)
+    @assert 0.0 <= η_isen_design <= 1 "design point isentropic efficiecny should be between (0,1)"
     @assert dew_temperature(fluid,p_ref,z)[1] ≤ T_ref "Reference state should be gas. Change p_ref or T_ref" 
     κ = compute_isentropic_exponent(fluid,p_ref,T_ref,z)
     πi = built_in_volume_ratio^κ
