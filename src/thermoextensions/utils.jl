@@ -11,6 +11,10 @@ function isentropic_ideal_gas_out_temp(p_in,T_in,p_out,Cv = 1.5*Clapeyron.Rgas()
     return exp(log_T_out)
 end
 
+
+"""
+Returns the outlet enthalpy in vapour phase for constant isentropic efficiency. Use in compression of gas. 
+"""
 function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray{TZ}, fluid::EoSModel, crit = crit_mix(fluid,z),Tdew = nothing) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real, TZ<:Real}
     TT = promote_type(T1, T2, T3, T4, TZ)
     T_in = Clapeyron.Tproperty(fluid, p_in, h_in, z,enthalpy, phase = :vapour)::TT
@@ -45,6 +49,9 @@ function isentropic_compressor(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Ab
     return ha
 end
 
+"""
+Returns the outlet enthalpy in liquid phase for constant isentropic efficiency. Use in pump of ORC. 
+"""
 function isentropic_pump(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::AbstractArray{TZ}, fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real, TZ<:Real}
     TT = promote_type(T1, T2, T3, T4, TZ)
     s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in, z,phase = :liquid) ::TT
@@ -53,6 +60,10 @@ function isentropic_pump(p_in::T1, p_out::T2, η_isen::T3, h_in::T4, z::Abstract
     return (h_in + (h_isen - h_in) / η_isen) ::TT
 end
 
+
+"""
+Returns the outlet enthalpy in vapour phase for constant isentropic efficiency for turbine application. 
+"""
 function isentropic_expander(p_in::T1,p_out::T2,η_isen::T3,h_in::T4,z::AbstractVector{TZ},fluid::EoSModel) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real, TZ<:Real}
     TT = promote_type(T1, T2, T3, T4, TZ)
     s_isen = Clapeyron.PH.entropy(fluid, p_in, h_in,z,phase = :vapour) ::TT
@@ -71,6 +82,10 @@ function isentropic_expander(p_in::T1,p_out::T2,η_isen::T3,h_in::T4,z::Abstract
     return h_out::TT
 end
 
+
+"""
+Computes the heat transfer in the recuperator. Assumes fluid entering from the left to be higher in temperature. Based over ϵ - effictiveness of heat exchanger. 
+"""
 function IHEX_Q(fluid::EoSModel,ϵ::T1,T_in_left::T2,p_in_left::T3,T_in_right::T4,p_in_right::T5,z::AbstractVector{TZ}) where {T1<:Real,T2<:Real,T3<:Real,T4<:Real,T5<:Real, TZ<:Real}
     TT = promote_type(T1, T2, T3, T4, T5, TZ)
     T_in_left <= T_in_right && @warn  "Function assume left fluid is hotter. This didn't happen. Now heat transfer will be negative."
@@ -108,6 +123,10 @@ function off_design_compressor_relation(fluid::EoSModel,z,η_isen_design,built_i
     return compression_relation
 end
 
+
+"""
+Similar to `off_design_compressor_relation` for modelling of expander
+"""
 function off_design_expander_relation(fluid::EoSModel,z,η_isen_design,built_in_volume_ratio;p_ref = 101325.0, T_ref = 300.0, check = true)
     if check
         @assert 0.0 <= η_isen_design <= 1 "design point isentropic efficiency should be between (0,1)"
