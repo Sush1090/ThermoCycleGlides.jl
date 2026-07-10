@@ -119,6 +119,9 @@ p[2] -> evaporator pressure
 function η(prob::ORC,sol::AbstractVector{T}) where {T<:Real}
     @assert length(sol) == 2 "Pressure vector p must be of length 2"
     p_evap,p_cond = sol .* 101325 # convert to Pa
+    if p_evap < p_cond
+        return 0.0
+    end
     Tsat_cond = Clapeyron.bubble_temperature(prob.fluid, p_cond, prob.z)[1]
     h1 = Clapeyron.enthalpy(prob.fluid, p_cond, Tsat_cond - prob.ΔT_sc, prob.z)
     h2 = isentropic_pump(p_cond, p_evap, prob.η_pump, h1, prob.z, prob.fluid)
@@ -401,6 +404,9 @@ end
 function η(prob::ThermoCycleGlides.ORCEconomizer,sol::AbstractVector{T}) where {T<:Real}
     @assert length(sol) == 2 "Pressure vector p must be of length 2"
     p_evap,p_cond = sol .* 101325 # convert to Pa
+    if p_evap < p_cond
+        return 0.0
+    end
     Tsat_cond = Clapeyron.bubble_temperature(prob.orc.fluid, p_cond, prob.orc.z)[1]
     h1 = Clapeyron.enthalpy(prob.orc.fluid, p_cond, Tsat_cond - prob.orc.ΔT_sc, prob.orc.z)
     h2 = ThermoCycleGlides.isentropic_pump(p_cond, p_evap, prob.orc.η_pump, h1, prob.orc.z, prob.orc.fluid)
