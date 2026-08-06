@@ -6,7 +6,7 @@ Here an example of `HeatPump` is shown.
 
 We set our `HeatPump`
 ```julia
-using Clapeyron, ThermoCycleGlides,Metaheuristics
+using Clapeyron, Carnot,Metaheuristics
 
 fluid = cPR("propane",idealmodel = ReidIdeal)
 hp = HeatPump(fluid=fluid, z=[1.0], T_evap_in=310, T_evap_out=300.0, T_cond_in=325, T_cond_out=355, η_comp=0.75, pp_evap=5, pp_cond=5, ΔT_sc=5.0, ΔT_sh=5.0)
@@ -22,7 +22,7 @@ algo = ECA(options = options)
 
 We optimize the system
 ```julia
-julia> result,hp_optimized = ThermoCycleGlides.optimize(hp,algo,ThermoCycleParameters())
+julia> result,hp_optimized = Carnot.optimize(hp,algo,ThermoCycleParameters())
 ```
 
 ```julia
