@@ -1,8 +1,8 @@
-using Documenter, ThermoCycleGlides
+using Documenter, Carnot
 
 makedocs(
-sitename="ThermoCycleGlides.jl",
-modules = [ThermoCycleGlides],
+sitename="Carnot.jl",
+modules = [Carnot],
 doctest = true,
 pages = [
     "Home" => "index.md",
@@ -13,4 +13,4 @@ pages = [
 ]
 )
 
-deploydocs(repo = "github.com/Sush1090/ThermoCycleGlides.jl",push_preview = true)
+deploydocs(repo = "github.com/ClapeyronThermo/Carnot.jl",push_preview = true)
