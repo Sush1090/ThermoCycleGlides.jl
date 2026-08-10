@@ -22,7 +22,7 @@ algo = ECA(options = options)
 
 We optimize the system
 ```julia
-julia> result,hp_optimized = Carnot.optimize(hp,algo,ThermoCycleParameters())
+julia> x,sol_opt = Carnot.optimize(hp,algo,ThermoCycleParameters())
 ```
 
 ```julia
@@ -105,13 +105,18 @@ julia> result,hp_optimized = Carnot.optimize(hp,algo,ThermoCycleParameters())
   Stop reason:     Due to Convergence Termination criterion.
 ```
 
-To plot the cycle we do as before but now the optimized cycle is already returned by the `optimize` function - `hp_optimized`
+The optimization returns the superheating and subcooling temperatures along with the `SolutionState` at the optimized point. 
+
+```julia
+hp_optimized = hp;
+hp_optimized.ΔT_sh = x[1]
+hp_optimized.ΔT_sc = x[2]
+```
 
 **Note:** This is a metaheuristic method hence the converged answer for the user for this case can slighty be different based on number of function calls , time, solution etc ..
 
 ```julia
-sol = solve(hp_optimized,ThermoCycleParameters());
-plot(hp_optimized,sol,N = 100)
+plot(hp_optimized,sol_opt,N = 100)
 ```
 
 The `HeatPump` cycle before optimization had a COP of `-3.23`
