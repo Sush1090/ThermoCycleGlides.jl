@@ -945,10 +945,11 @@ mutable struct HeatPumpTranscritical <:ThermoCycleProblem
     η_comp::Real
     pp_evap::Real
     pp_cond::Real
+    ΔT_sh::Real
 end
 
 
-function HeatPumpTranscritical(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in,T_cond_out,η_comp,pp_evap,pp_cond,)
+function HeatPumpTranscritical(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in,T_cond_out,η_comp,pp_evap,pp_cond,ΔT_sh)
     @assert fluid isa CubicModel || fluid isa SingleFluid || fluid isa MultiFluid "The type of EOS provided is not supported as of now."
     #default assertions
     @assert length(z) == 1 "Composition vector z must have exactly one element. implementation for pure fluids only"
@@ -981,6 +982,7 @@ function HeatPumpTranscritical(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in
     η_comp_T = convert(type_promoted, η_comp)
     pp_evap_T = convert(type_promoted, pp_evap)
     pp_cond_T = convert(type_promoted, pp_cond)
+    ΔT_sh_T = convert(type_promoted,ΔT_sh)
     return HeatPumpTranscritical(
     fluid,         # EoSModel
     z_T,             # AbstractVector{T}
@@ -990,13 +992,14 @@ function HeatPumpTranscritical(;fluid::EoSModel,z,T_evap_in,T_evap_out,T_cond_in
     T_cond_out_T,  # T
     η_comp_T,      # T
     pp_evap_T,     # T
-    pp_cond_T      # T
+    pp_cond_T,      # T
+    ΔT_sh_T
 )
 end
 
 export HeatPumpTranscritical
 
-function F(prob::HeatPumpTranscritical,x::AbstractVector{TT},T::AbstractVector{TT};N::Int) where {TT<:Real}
+function F(prob::HeatPumpTranscritical,x::AbstractVector{TT};N::Int) where {TT<:Real}
     # x is the vector of unknowns (evaporator and condenser pressures)
     # p_cond is supercritical and p_evap is subcritical
     # T is the vector of temperatures (evaporator and condenser outlet temperatures) also unkown
@@ -1005,8 +1008,8 @@ function F(prob::HeatPumpTranscritical,x::AbstractVector{TT},T::AbstractVector{T
     p_evap = x[1] * 101325
     p_cond = x[2] * p_crit
 
-    ΔT_sh = T[1]
-    ΔT_sc = T[2]
+    ΔT_sh = prob.ΔT_sh
+    ΔT_sc = T_crit - (prob.T_cond_in + prob.pp_cond) #pinch will be met by default. So check for other pinch part from this? 
 
     T_evap_out = dew_temperature(prob.fluid,p_evap,prob.z)[1] + ΔT_sh
     h_evap_out = enthalpy(prob.fluid,p_evap,T_evap_out,prob.z)
