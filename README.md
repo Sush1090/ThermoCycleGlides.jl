@@ -1,5 +1,7 @@
 # Carnot.jl
 
+<img src="docs/src/assets/logo.png" alt="Carnot Logo" width="100">
+
 [![Build Status](https://github.com/ClapeyronThermo/Carnot.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ClapeyronThermo/Carnot.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://clapeyronthermo.github.io/Carnot.jl/dev/)
 
 This package aims to solve Heat Pump and ORC systems for given known temperature glides. For now it is robust for sub-critical cycles. 
