@@ -2,9 +2,9 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/src/assets/logos/logo_dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/src/assets/logos/logo.svg">
-    <img src="docs/src/assets/logos/logo.svg" alt="Carnot Logo" width="300">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/src/assets/logo_dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/src/assets/logo.svg">
+    <img src="docs/src/assets/logo.svg" alt="Carnot Logo" width="300">
   </picture>
 </p>
 
