@@ -1,6 +1,6 @@
 # Carnot.jl
 
-<img src="docs/src/assets/logo.png" alt="Carnot Logo" width="100">
+<img src="docs/src/assets/logo.svg" alt="Carnot Logo" width="100">
 
 [![Build Status](https://github.com/ClapeyronThermo/Carnot.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ClapeyronThermo/Carnot.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://clapeyronthermo.github.io/Carnot.jl/dev/)
 
